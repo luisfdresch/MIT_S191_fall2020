@@ -426,17 +426,6 @@ function least_energy(energies, i, j)
 	return (v[1][1] + energies[i,j], my_range[v[2]]-j) 
 end
 
-# ╔═╡ 940b33e6-ff9b-11ea-38fb-93e2e0abf0ee
-begin
-	test_energies = [i+j + (i-j)^2 for (i,j) in Iterators.product(1:8, 2:2:16)]
-	test_energies[7,7] = 150
-	test_energies
-
-end
-
-# ╔═╡ 894fa9b4-ff9b-11ea-0a5f-83f9e9336895
-least_energy(test_energies,8,4)
-
 # ╔═╡ a7f3d9f8-f3bb-11ea-0c1a-55bbb8408f09
 md"""
 This is so elegant, correct, but inefficient! If you **check this checkbox** $(@bind compute_access CheckBox()), you will see the number of accesses made to the energies array it took to compute the least energy from the pixel (1,7):
@@ -484,9 +473,6 @@ function recursive_seam(energies, starting_pixel)
 	# Replace the following line with your code.
 	#[rand(1:starting_pixel) for i=1:m]
 end
-
-# ╔═╡ 02ab9750-0028-11eb-0f48-cd30a3cc8632
-a = recursive_seam(test_energies, 8)
 
 # ╔═╡ 1d55333c-f393-11ea-229a-5b1e9cabea6a
 md"Compute shrunk image: $(@bind shrink_recursive CheckBox())"
@@ -582,12 +568,15 @@ end
 # ╔═╡ fe6a99b4-0047-11eb-1b82-8f388fff7594
 @bind val Slider(1:8, show_value = true)
 
+# ╔═╡ 6bda5214-01b3-11eb-0798-2bc55d8f791b
+typeof(val)
+
 # ╔═╡ 6b9eaa00-004a-11eb-0914-938abf8ed6c4
-test_energies
+test_energies2 = rand(20,20);
 
 
 # ╔═╡ f9083a4e-0047-11eb-2353-d3360e7196e3
-recursive_memoized_seam(test_energies, val)
+recursive_memoized_seam(test_energies2, val)
 
 # ╔═╡ 4e3bcf88-f3c5-11ea-3ada-2ff9213647b7
 md"Compute shrunk image: $(@bind shrink_dict CheckBox())"
@@ -606,18 +595,43 @@ Write a variation of `matrix_memoized_least_energy` and `matrix_memoized_seam` w
 # ╔═╡ c8724b5e-f3bd-11ea-0034-b92af21ca12d
 function matrix_memoized_least_energy(energies, i, j, memory)
 	m, n = size(energies)
-	
-	# Replace the following line with your code.
-	[starting_pixel for i=1:m]
+	if memory[i,j] != 0
+		return memory
+	elseif m == i
+		memory[i,j] = energies[i,j]
+		return memory
+	else
+		myrange = max(1,j-1):min(j+1, n)
+		tmp = zeros(length(myrange))
+		for (q,r) in enumerate(myrange)
+			if memory[i+1, r] != 0
+				tmp[q] = memory[i+1, r]
+			else
+				memory = matrix_memoized_least_energy(energies, i+1, r, memory)
+				tmp[q] = memory[i+1, r]
+			end
+		end
+		next = myrange[findmin(tmp)[2]]-j
+		memory[i,j] = memory[i+1, j+next] +  energies[i,j]
+		return memory
+	end
 end
 
 # ╔═╡ be7d40e2-f320-11ea-1b56-dff2a0a16e8d
 function matrix_memoized_seam(energies, starting_pixel)
 	memory = zeros(size(energies)) # use this as storage -- intially it's all zeros
 	m, n = size(energies)
-	
+
 	# Replace the following line with your code.
-	[starting_pixel for i=1:m]
+	memory = matrix_memoized_least_energy(energies, 1, starting_pixel, memory)
+	seam = zeros(Int, m)
+	seam[1] = starting_pixel
+	for i = 1:m-1
+		   myrange = max(1, seam[i]-1):min(n, seam[i]+1)
+		   u = findmin( [memory[i+1, r] for r in myrange])
+		   seam[i+1] = myrange[1] + u[2] -1
+	end
+	return seam
 end
 
 # ╔═╡ 507f3870-f3c5-11ea-11f6-ada3bb087634
@@ -636,8 +650,60 @@ Now it's easy to see that the above algorithm is equivalent to one that populate
 
 # ╔═╡ ff055726-f320-11ea-32f6-2bf38d7dd310
 function least_energy_matrix(energies)
-	copy(energies)
+	m,n = size(energies)
+	least_energies = similar(energies,m,n)
+	least_energies[m,:] .= @view energies[m,:]
+	for i = m-1:-1:1
+		for j = 1:n
+			if j == 1
+				least_energies[i,j] = energies[i,j] + minimum(@view least_energies[i+1, j:j+1])
+			elseif j == n
+				least_energies[i,j] = energies[i,j] + minimum(@view least_energies[i+1, j-1:j])
+			else	
+				least_energies[i,j] = energies[i,j] + minimum(@view least_energies[i+1, j-1:j+1])
+			end
+			
+		end
+	end
+	return least_energies
 end
+
+
+# ╔═╡ bb89c1c8-01ec-11eb-2b0e-87636aaa8941
+function least_energy_matrix2(energies)
+	m,n = size(energies)
+	least_energies = similar(energies,m,n)
+	least_energies[m,:] = @view energies[m,:]
+	for i = m-1:-1:1
+		for j = 1:n
+			if j == 1
+				my_range = 1:2
+			elseif j == n
+				my_range = j-1:j
+			else	
+				my_range = j-1:j+1
+			end
+			
+			least_energies[i,j] = energies[i,j] + minimum(@view least_energies[i+1, my_range])
+		end
+	end
+	return least_energies
+end
+
+# ╔═╡ 7d336e46-01f2-11eb-0582-8dc70cf4312d
+
+
+# ╔═╡ bce33a9c-01ed-11eb-0beb-e169e6e8556e
+begin 
+	A = zeros(500,500)
+	m,n = size(A)
+	for (i,j) in Iterators.product(1:m,1:n)
+           A[i,j] = sin(i)^2 + cos(j)^2
+	end
+end
+
+# ╔═╡ defc5248-01ed-11eb-0bfa-15576764efa5
+@benchmark least_energy_matrix2(A)
 
 # ╔═╡ 92e19f22-f37b-11ea-25f7-e321337e375e
 md"""
@@ -650,10 +716,21 @@ md"""
 function seam_from_precomputed_least_energy(energies, starting_pixel::Int)
 	least_energies = least_energy_matrix(energies)
 	m, n = size(least_energies)
-	
-	# Replace the following line with your code.
-	[starting_pixel for i=1:m]
+	seam = zeros(Int,m)
+	seam[1] = starting_pixel
+	for i=1:m-1
+	   myrange = max(1, seam[i]-1):min(n, seam[i]+1)
+	   u = findmin( [least_energies[i+1, r] for r in myrange])
+	   seam[i+1] = myrange[1] + u[2] -1
+	end
+	return seam
 end
+
+# ╔═╡ 54fa1afc-01f3-11eb-2ffd-df18c4ba52c9
+least_energies = least_energy_matrix(A)
+
+# ╔═╡ 41b586c6-01f3-11eb-2c99-95d896e81c0b
+seam_from_precomputed_least_energy(A, 150)
 
 # ╔═╡ 51df0c98-f3c5-11ea-25b8-af41dc182bac
 md"Compute shrunk image: $(@bind shrink_bottomup CheckBox())"
@@ -978,8 +1055,6 @@ bigbreak
 # ╠═ddba07dc-f3b7-11ea-353e-0f67713727fc
 # ╠═73b52fd6-f3b9-11ea-14ed-ebfcab1ce6aa
 # ╠═8ec27ef8-f320-11ea-2573-c97b7b908cb7
-# ╠═940b33e6-ff9b-11ea-38fb-93e2e0abf0ee
-# ╠═894fa9b4-ff9b-11ea-0a5f-83f9e9336895
 # ╟─9f18efe2-f38e-11ea-0871-6d7760d0b2f6
 # ╟─a7f3d9f8-f3bb-11ea-0c1a-55bbb8408f09
 # ╟─fa8e2772-f3b6-11ea-30f7-699717693164
@@ -987,22 +1062,22 @@ bigbreak
 # ╟─cbf29020-f3ba-11ea-2cb0-b92836f3d04b
 # ╟─8bc930f0-f372-11ea-06cb-79ced2834720
 # ╠═85033040-f372-11ea-2c31-bb3147de3c0d
-# ╠═02ab9750-0028-11eb-0f48-cd30a3cc8632
-# ╠═1d55333c-f393-11ea-229a-5b1e9cabea6a
+# ╟─1d55333c-f393-11ea-229a-5b1e9cabea6a
 # ╟─d88bc272-f392-11ea-0efd-15e0e2b2cd4e
-# ╠═e66ef06a-f392-11ea-30ab-7160e7723a17
+# ╟─e66ef06a-f392-11ea-30ab-7160e7723a17
 # ╟─c572f6ce-f372-11ea-3c9a-e3a21384edca
-# ╠═6d993a5c-f373-11ea-0dde-c94e3bbd1552
+# ╟─6d993a5c-f373-11ea-0dde-c94e3bbd1552
 # ╟─ea417c2a-f373-11ea-3bb0-b1b5754f2fac
 # ╟─56a7f954-f374-11ea-0391-f79b75195f4d
 # ╠═b1d09bc8-f320-11ea-26bb-0101c9a204e2
 # ╠═6a6a6f5e-0048-11eb-063e-67617b37bdeb
-# ╠═fe6a99b4-0047-11eb-1b82-8f388fff7594
+# ╟─fe6a99b4-0047-11eb-1b82-8f388fff7594
+# ╠═6bda5214-01b3-11eb-0798-2bc55d8f791b
 # ╠═6b9eaa00-004a-11eb-0914-938abf8ed6c4
 # ╠═f9083a4e-0047-11eb-2353-d3360e7196e3
-# ╠═4e3bcf88-f3c5-11ea-3ada-2ff9213647b7
-# ╠═4e3ef866-f3c5-11ea-3fb0-27d1ca9a9a3f
-# ╠═6e73b1da-f3c5-11ea-145f-6383effe8a89
+# ╟─4e3bcf88-f3c5-11ea-3ada-2ff9213647b7
+# ╟─4e3ef866-f3c5-11ea-3fb0-27d1ca9a9a3f
+# ╟─6e73b1da-f3c5-11ea-145f-6383effe8a89
 # ╟─cf39fa2a-f374-11ea-0680-55817de1b837
 # ╠═c8724b5e-f3bd-11ea-0034-b92af21ca12d
 # ╠═be7d40e2-f320-11ea-1b56-dff2a0a16e8d
@@ -1012,9 +1087,15 @@ bigbreak
 # ╟─4f48c8b8-f39d-11ea-25d2-1fab031a514f
 # ╟─24792456-f37b-11ea-07b2-4f4c8caea633
 # ╠═ff055726-f320-11ea-32f6-2bf38d7dd310
+# ╠═bb89c1c8-01ec-11eb-2b0e-87636aaa8941
+# ╠═7d336e46-01f2-11eb-0582-8dc70cf4312d
+# ╠═bce33a9c-01ed-11eb-0beb-e169e6e8556e
+# ╠═defc5248-01ed-11eb-0bfa-15576764efa5
 # ╟─e0622780-f3b4-11ea-1f44-59fb9c5d2ebd
 # ╟─92e19f22-f37b-11ea-25f7-e321337e375e
 # ╠═795eb2c4-f37b-11ea-01e1-1dbac3c80c13
+# ╠═54fa1afc-01f3-11eb-2ffd-df18c4ba52c9
+# ╠═41b586c6-01f3-11eb-2c99-95d896e81c0b
 # ╠═51df0c98-f3c5-11ea-25b8-af41dc182bac
 # ╠═51e28596-f3c5-11ea-2237-2b72bbfaa001
 # ╠═0a10acd8-f3c6-11ea-3e2f-7530a0af8c7f
