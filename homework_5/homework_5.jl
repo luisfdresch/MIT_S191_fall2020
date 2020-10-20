@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.3
+# v0.12.4
 
 using Markdown
 using InteractiveUtils
@@ -16,7 +16,7 @@ end
 # ╔═╡ 2b37ca3a-0970-11eb-3c3d-4f788b411d1a
 begin
 	using Pkg
-	Pkg.activate(mktempdir())
+	Pkg.activate("/home/luisfdresch/Documents/2020.2/MIT_S191_fall2020")
 end
 
 # ╔═╡ 2dcb18d0-0970-11eb-048a-c1734c6db842
@@ -119,7 +119,10 @@ We define a struct type `Coordinate` that contains integers `x` and `y`.
 """
 
 # ╔═╡ 0ebd35c8-0972-11eb-2e67-698fd2d311d2
-
+struct Coordinate
+	x::Int
+	y::Int
+end
 
 # ╔═╡ 027a5f48-0a44-11eb-1fbf-a94d02d0b8e3
 md"""
@@ -127,7 +130,7 @@ md"""
 """
 
 # ╔═╡ b2f90634-0a68-11eb-1618-0b42f956b5a7
-origin = missing
+origin = Coordinate(0, 0)
 
 # ╔═╡ 3e858990-0954-11eb-3d10-d10175d8ca1c
 md"""
@@ -135,9 +138,9 @@ md"""
 """
 
 # ╔═╡ 189bafac-0972-11eb-1893-094691b2073c
-# function make_tuple(c)
-# 	missing
-# end
+function make_tuple(c)
+	return (c.x, c.y)
+end
 
 # ╔═╡ 73ed1384-0a29-11eb-06bd-d3c441b8a5fc
 md"""
@@ -179,13 +182,12 @@ md"""
 """
 
 # ╔═╡ e24d5796-0a68-11eb-23bb-d55d206f3c40
-# function Base.:+(a::TYPE, b::TYPE)
-	
-# 	return missing
-# end
+function Base.:+(a::Coordinate, b::Coordinate)
+	return Coordinate(a.x + b.x, a.y + b.y)
+end
 
 # ╔═╡ ec8e4daa-0a2c-11eb-20e1-c5957e1feba3
-# Coordinate(3,4) + Coordinate(10,10) # uncomment to check + works
+Coordinate(3,4) + Coordinate(10,10) # uncomment to check + works
 
 # ╔═╡ e144e9d0-0a2d-11eb-016e-0b79eba4b2bb
 md"""
@@ -201,12 +203,12 @@ In our model, agents will be able to walk in 4 directions: up, down, left and ri
 # ╔═╡ 5278e232-0972-11eb-19ff-a1a195127297
 # uncomment this:
 
-# possible_moves = [
-# 	Coordinate( 1, 0), 
-# 	Coordinate( 0, 1), 
-# 	Coordinate(-1, 0), 
-# 	Coordinate( 0,-1),
-# ]
+possible_moves = [
+	Coordinate( 1, 0), 
+	Coordinate( 0, 1), 
+ 	Coordinate(-1, 0), 
+ 	Coordinate( 0,-1),
+ 	]
 
 # ╔═╡ 71c9788c-0aeb-11eb-28d2-8dcc3f6abacd
 md"""
@@ -214,7 +216,7 @@ md"""
 """
 
 # ╔═╡ 69151ce6-0aeb-11eb-3a53-290ba46add96
-
+Coordinate(4, 5) + rand(possible_moves)
 
 # ╔═╡ 3eb46664-0954-11eb-31d8-d9c0b74cf62b
 md"""
@@ -230,14 +232,11 @@ Possible steps:
 
 """
 
-# ╔═╡ edf86a0e-0a68-11eb-2ad3-dbf020037019
-# function trajectory(w::Coordinate, n::Int)
-	
-# 	return missing
-# end
-
-# ╔═╡ 44107808-096c-11eb-013f-7b79a90aaac8
-# test_trajectory = trajectory(Coordinate(4,4), 30) # uncomment to test
+# ╔═╡ 40cef332-12fd-11eb-133e-3dd2b0d19bf4
+function trajectory(w::Coordinate, n::Int)
+	moves = rand(possible_moves, n)
+	return accumulate(+, moves, init = w)
+end
 
 # ╔═╡ 478309f4-0a31-11eb-08ea-ade1755f53e0
 function plot_trajectory!(p::Plots.Plot, trajectory::Vector; kwargs...)
@@ -247,25 +246,6 @@ function plot_trajectory!(p::Plots.Plot, trajectory::Vector; kwargs...)
 		linealpha=LinRange(1.0, 0.2, length(trajectory)),
 		kwargs...)
 end
-
-# ╔═╡ 87ea0868-0a35-11eb-0ea8-63e27d8eda6e
-try
-	p = plot(ratio=1, size=(650,200))
-	plot_trajectory!(p, test_trajectory; color="black", showaxis=false, axis=nothing, linewidth=4)
-	p
-catch
-end
-
-# ╔═╡ 51788e8e-0a31-11eb-027e-fd9b0dc716b5
-# 	let
-# 		long_trajectory = trajectory(Coordinate(4,4), 1000)
-
-# 		p = plot(ratio=1)
-# 		plot_trajectory!(p, long_trajectory)
-# 		p
-# 	end
-
-# ^ uncomment to visualize a trajectory
 
 # ╔═╡ 3ebd436c-0954-11eb-170d-1d468e2c7a37
 md"""
@@ -288,8 +268,8 @@ end
 ```
 """
 
-# ╔═╡ dcefc6fe-0a3f-11eb-2a96-ddf9c0891873
-
+# ╔═╡ 5844a9f6-12ff-11eb-3e74-970087df0776
+distinguishable_colors(5)
 
 # ╔═╡ b4d5da4a-09a0-11eb-1949-a5807c11c76c
 md"""
@@ -304,13 +284,23 @@ One relatively simple boundary condition is a **collision boundary**:
 """
 
 # ╔═╡ 0237ebac-0a69-11eb-2272-35ea4e845d84
-# function collide_boundary(c::Coordinate, L::Number)
-	
-# 	return missing
-# end
+function collide_boundary(c::Coordinate, L::Number)
+	if abs(c.x) > L	
+		x = sign(c.x) * L
+	else
+		x = c.x
+	end
+	if abs(c.y) > L
+		y = sign(c.y) * L
+	else
+		y = c.y
+	end
+	return Coordinate(x, y)
+		
+end
 
 # ╔═╡ ad832360-0a40-11eb-2857-e7f0350f3b12
-# collide_boundary(Coordinate(12,4), 10) # uncomment to test
+collide_boundary(Coordinate(12,4), 10) # uncomment to test
 
 # ╔═╡ b4ed2362-09a0-11eb-0be9-99c91623b28f
 md"""
@@ -320,10 +310,50 @@ md"""
 """
 
 # ╔═╡ 0665aa3e-0a69-11eb-2b5d-cd718e3c7432
-# function trajectory(c::Coordinate, n::Int, L::Number)
-	
-# 	return missing
-# end
+function trajectory(c::Coordinate, n::Int, L::Number)
+	moves = rand(possible_moves, n)
+	return accumulate((x,y)-> collide_boundary(x + y, L), moves) 
+end
+
+# ╔═╡ 44107808-096c-11eb-013f-7b79a90aaac8
+test_trajectory = trajectory(Coordinate(4,4), 30) # uncomment to test
+
+# ╔═╡ 87ea0868-0a35-11eb-0ea8-63e27d8eda6e
+try
+	p = plot(ratio=1, size=(650,300))
+	plot_trajectory!(p, test_trajectory; color="black", showaxis=false, axis=nothing, linewidth=4)
+	p
+catch
+end
+
+# ╔═╡ 51788e8e-0a31-11eb-027e-fd9b0dc716b5
+ 	let
+ 		long_trajectory = trajectory(Coordinate(4,4), 1000)
+ 		p = plot(ratio=1)
+		plot_trajectory!(p, long_trajectory)
+ 		p
+ 	end
+
+# ^ uncomment to visualize a trajectory
+
+# ╔═╡ dcefc6fe-0a3f-11eb-2a96-ddf9c0891873
+let
+    # Create a new plot with aspect ratio 1:1
+    p = plot(ratio=1)
+	colors = distinguishable_colors(10)
+	for i = 1:10
+		plot_trajectory!(p, trajectory(Coordinate(rand(1:20), rand(1:20)), 50), color = colors[i])
+	end
+		
+    p
+end
+
+# ╔═╡ 46506506-1303-11eb-2302-f3fadc6013d6
+let
+	p = plot( ratio = 1)
+	plot_trajectory!(p, trajectory(origin, 1000, 4))
+	p
+end
 
 # ╔═╡ 3ed06c80-0954-11eb-3aee-69e4ccdc4f9d
 md"""
@@ -941,7 +971,7 @@ bigbreak
 # ╟─66663fcc-0a58-11eb-3568-c1f990c75bf2
 # ╟─3e858990-0954-11eb-3d10-d10175d8ca1c
 # ╠═189bafac-0972-11eb-1893-094691b2073c
-# ╠═ad1253f8-0a34-11eb-265e-fffda9b6473f
+# ╟─ad1253f8-0a34-11eb-265e-fffda9b6473f
 # ╟─73ed1384-0a29-11eb-06bd-d3c441b8a5fc
 # ╠═96707ef0-0a29-11eb-1a3e-6bcdfb7897eb
 # ╠═b0337d24-0a29-11eb-1fab-876a87c0973f
@@ -949,25 +979,27 @@ bigbreak
 # ╠═e24d5796-0a68-11eb-23bb-d55d206f3c40
 # ╠═ec8e4daa-0a2c-11eb-20e1-c5957e1feba3
 # ╟─e144e9d0-0a2d-11eb-016e-0b79eba4b2bb
-# ╠═ec576da8-0a2c-11eb-1f7b-43dec5f6e4e7
+# ╟─ec576da8-0a2c-11eb-1f7b-43dec5f6e4e7
 # ╟─71c358d8-0a2f-11eb-29e1-57ff1915e84a
 # ╠═5278e232-0972-11eb-19ff-a1a195127297
 # ╟─71c9788c-0aeb-11eb-28d2-8dcc3f6abacd
 # ╠═69151ce6-0aeb-11eb-3a53-290ba46add96
 # ╟─3eb46664-0954-11eb-31d8-d9c0b74cf62b
-# ╠═edf86a0e-0a68-11eb-2ad3-dbf020037019
+# ╠═40cef332-12fd-11eb-133e-3dd2b0d19bf4
 # ╠═44107808-096c-11eb-013f-7b79a90aaac8
-# ╟─87ea0868-0a35-11eb-0ea8-63e27d8eda6e
+# ╠═87ea0868-0a35-11eb-0ea8-63e27d8eda6e
 # ╟─058e3f84-0a34-11eb-3f87-7118f14e107b
 # ╠═478309f4-0a31-11eb-08ea-ade1755f53e0
 # ╠═51788e8e-0a31-11eb-027e-fd9b0dc716b5
 # ╟─3ebd436c-0954-11eb-170d-1d468e2c7a37
+# ╠═5844a9f6-12ff-11eb-3e74-970087df0776
 # ╠═dcefc6fe-0a3f-11eb-2a96-ddf9c0891873
 # ╟─b4d5da4a-09a0-11eb-1949-a5807c11c76c
 # ╠═0237ebac-0a69-11eb-2272-35ea4e845d84
 # ╠═ad832360-0a40-11eb-2857-e7f0350f3b12
 # ╟─b4ed2362-09a0-11eb-0be9-99c91623b28f
 # ╠═0665aa3e-0a69-11eb-2b5d-cd718e3c7432
+# ╠═46506506-1303-11eb-2302-f3fadc6013d6
 # ╟─ed2d616c-0a66-11eb-1839-edf8d15cf82a
 # ╟─3ed06c80-0954-11eb-3aee-69e4ccdc4f9d
 # ╠═35537320-0a47-11eb-12b3-931310f18dec
@@ -1043,4 +1075,3 @@ bigbreak
 # ╟─0b6b27ec-0970-11eb-20c2-89515ee3ab88
 # ╟─0b901714-0970-11eb-0b6a-ebe739db8037
 # ╟─d5cb6b2c-0a66-11eb-1aff-41d0e502d5e5
-
