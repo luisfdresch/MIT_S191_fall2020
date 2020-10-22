@@ -268,9 +268,6 @@ end
 ```
 """
 
-# ╔═╡ 5844a9f6-12ff-11eb-3e74-970087df0776
-distinguishable_colors(5)
-
 # ╔═╡ b4d5da4a-09a0-11eb-1949-a5807c11c76c
 md"""
 #### Exercise 1.5
@@ -312,7 +309,7 @@ md"""
 # ╔═╡ 0665aa3e-0a69-11eb-2b5d-cd718e3c7432
 function trajectory(c::Coordinate, n::Int, L::Number)
 	moves = rand(possible_moves, n)
-	return accumulate((x,y)-> collide_boundary(x + y, L), moves) 
+	return accumulate((x,y)-> collide_boundary(x + y, L), moves, init = c) 
 end
 
 # ╔═╡ 44107808-096c-11eb-013f-7b79a90aaac8
@@ -351,7 +348,7 @@ end
 # ╔═╡ 46506506-1303-11eb-2302-f3fadc6013d6
 let
 	p = plot( ratio = 1)
-	plot_trajectory!(p, trajectory(origin, 1000, 4))
+	plot_trajectory!(p, trajectory(origin, 10, 4))
 	p
 end
 
@@ -371,6 +368,10 @@ Let's define a type `Agent`. `Agent` contains a `position` (of type `Coordinate`
 
 # ╔═╡ cf2f3b98-09a0-11eb-032a-49cc8c15e89c
 # define agent struct here:
+mutable struct Agent
+	position::Coordinate
+	status::InfectionStatus
+end
 
 # ╔═╡ 814e888a-0954-11eb-02e5-0964c7410d30
 md"""
@@ -381,13 +382,12 @@ It returns a `Vector` of `N` randomly generated `Agent`s. Their coordinates are 
 """
 
 # ╔═╡ 0cfae7ba-0a69-11eb-3690-d973d70e47f4
-# function initialize(N::Number, L::Number)
-	
-# 	return missing
-# end
+function initialize(N::Number, L::Number)
+	agents = [Agent(Coordinate(rand(-L:L), rand(-L:L)), S) for i = 1:N]
+	agents[rand(1:N)].status = I
+	return agents
+end
 
-# ╔═╡ 1d0f8eb4-0a46-11eb-38e7-63ecbadbfa20
-# initialize(3, 10)
 
 # ╔═╡ e0b0880c-0a47-11eb-0db2-f760bbbf9c11
 # Color based on infection status
@@ -400,10 +400,10 @@ else
 end
 
 # ╔═╡ b5a88504-0a47-11eb-0eda-f125d419e909
-# position(a::Agent) = a.position # uncomment this line
+position(a::Agent) = a.position # uncomment this line
 
 # ╔═╡ 87a4cdaa-0a5a-11eb-2a5e-cfaf30e942ca
-# color(a::Agent) = color(a.status) # uncomment this line
+color(a::Agent) = color(a.status) # uncomment this line
 
 # ╔═╡ 49fa8092-0a43-11eb-0ba9-65785ac6a42f
 md"""
@@ -414,16 +414,19 @@ You can use the keyword argument `c=color.(agents)` inside your call to the plot
 """
 
 # ╔═╡ 1ccc961e-0a69-11eb-392b-915be07ef38d
-# function visualize(agents::Vector, L)
+function visualize(agents::Vector, L)
+	p = scatter()
+	scatter!(p, (0,0), marker = :square, color = :white, alpha = 0.5, ms = 17*L, label = nothing)
+	scatter!(p, make_tuple.(position.(agents)), color = color.(agents), xlim = (-L-1,L+1), ylim = (-L-1,L+1), ratio = 1, label = nothing, showaxis = true)
 	
-# 	return missing
-# end
+	return p
+end
 
 # ╔═╡ 1f96c80a-0a46-11eb-0690-f51c60e57c3f
 let
 	N = 20
 	L = 10
-#	visualize(initialize(N, L), L) # uncomment this line!
+	visualize(initialize(N, L), L) # uncomment this line!
 end
 
 # ╔═╡ f953e06e-099f-11eb-3549-73f59fed8132
@@ -454,10 +457,30 @@ Write a function `interact!` that takes two `Agent`s and a `CollisionInfectionRe
 - if the first agent is infectious, it recovers with some probability
 """
 
+# ╔═╡ ddae24c6-146c-11eb-0d07-e30036368e87
+is_infected(a::Agent) = a.status == I
+
+# ╔═╡ 0b0b0302-146d-11eb-0660-a170d07cd252
+is_susceptible(a::Agent) = a.status == S
+
+# ╔═╡ 19b9dc32-146d-11eb-0148-75485045ad74
+set_status!(a::Agent, new_status::InfectionStatus) = a.status = new_status
+
+# ╔═╡ 520fab5c-146d-11eb-1b46-6bf2701dba2d
+function bernoulli(p::Number)
+	rand() <p ? (return true) : r(return false)
+end
+
 # ╔═╡ d1bcd5c4-0a4b-11eb-1218-7531e367a7ff
-#function interact!(agent::Agent, source::Agent, infection::CollisionInfectionRecovery)
-	#missing
-#end
+function interact!(agent::Agent, source::Agent, infection::CollisionInfectionRecovery)
+	if is_infected(source) && is_susceptible(agent) && bernoulli(infection.p_infection)
+		if agents.position == source.position
+			set_status!(agent, I)
+		end
+	elseif is_infected(agent) && bernoulli(infection.p_recovery)
+		set_status!(agent, R)
+	end
+end
 
 # ╔═╡ 34778744-0a5f-11eb-22b6-abe8b8fc34fd
 md"""
@@ -992,7 +1015,6 @@ bigbreak
 # ╠═478309f4-0a31-11eb-08ea-ade1755f53e0
 # ╠═51788e8e-0a31-11eb-027e-fd9b0dc716b5
 # ╟─3ebd436c-0954-11eb-170d-1d468e2c7a37
-# ╠═5844a9f6-12ff-11eb-3e74-970087df0776
 # ╠═dcefc6fe-0a3f-11eb-2a96-ddf9c0891873
 # ╟─b4d5da4a-09a0-11eb-1949-a5807c11c76c
 # ╠═0237ebac-0a69-11eb-2272-35ea4e845d84
@@ -1006,7 +1028,6 @@ bigbreak
 # ╠═cf2f3b98-09a0-11eb-032a-49cc8c15e89c
 # ╟─814e888a-0954-11eb-02e5-0964c7410d30
 # ╠═0cfae7ba-0a69-11eb-3690-d973d70e47f4
-# ╠═1d0f8eb4-0a46-11eb-38e7-63ecbadbfa20
 # ╟─4fac0f36-0a59-11eb-03d0-632dc9db063a
 # ╠═e0b0880c-0a47-11eb-0db2-f760bbbf9c11
 # ╠═b5a88504-0a47-11eb-0eda-f125d419e909
@@ -1018,6 +1039,10 @@ bigbreak
 # ╠═e6dd8258-0a4b-11eb-24cb-fd5b3554381b
 # ╠═de88b530-0a4b-11eb-05f7-85171594a8e8
 # ╟─80f39140-0aef-11eb-21f7-b788c5eab5c9
+# ╠═ddae24c6-146c-11eb-0d07-e30036368e87
+# ╠═0b0b0302-146d-11eb-0660-a170d07cd252
+# ╠═19b9dc32-146d-11eb-0148-75485045ad74
+# ╠═520fab5c-146d-11eb-1b46-6bf2701dba2d
 # ╠═d1bcd5c4-0a4b-11eb-1218-7531e367a7ff
 # ╟─34778744-0a5f-11eb-22b6-abe8b8fc34fd
 # ╠═24fe0f1a-0a69-11eb-29fe-5fb6cbf281b8
