@@ -28,6 +28,9 @@ begin
 	using PlutoUI
 end
 
+# ╔═╡ 2c9dd1f2-1470-11eb-145c-533ffc9696dc
+using Random
+
 # ╔═╡ 19fe1ee8-0970-11eb-2a0d-7d25e7d773c6
 md"_homework 5, version 0_"
 
@@ -416,8 +419,8 @@ You can use the keyword argument `c=color.(agents)` inside your call to the plot
 # ╔═╡ 1ccc961e-0a69-11eb-392b-915be07ef38d
 function visualize(agents::Vector, L)
 	p = scatter()
-	scatter!(p, (0,0), marker = :square, color = :white, alpha = 0.5, ms = 17*L, label = nothing)
-	scatter!(p, make_tuple.(position.(agents)), color = color.(agents), xlim = (-L-1,L+1), ylim = (-L-1,L+1), ratio = 1, label = nothing, showaxis = true)
+	#scatter!(p, (0,0), marker = :square, color = :white, alpha = 0.5, ms = 17*L, label = nothing)
+	scatter!(p, make_tuple.(position.(agents)), color = color.(agents), xlim = (-L-1,L+1), ylim = (-L-1,L+1), ratio = 1, label = nothing, showaxis = false, alpha = 0.8)
 	
 	return p
 end
@@ -425,7 +428,7 @@ end
 # ╔═╡ 1f96c80a-0a46-11eb-0690-f51c60e57c3f
 let
 	N = 20
-	L = 10
+	L = 5
 	visualize(initialize(N, L), L) # uncomment this line!
 end
 
@@ -457,11 +460,14 @@ Write a function `interact!` that takes two `Agent`s and a `CollisionInfectionRe
 - if the first agent is infectious, it recovers with some probability
 """
 
+# ╔═╡ 0b0b0302-146d-11eb-0660-a170d07cd252
+is_susceptible(a::Agent) = a.status == S
+
 # ╔═╡ ddae24c6-146c-11eb-0d07-e30036368e87
 is_infected(a::Agent) = a.status == I
 
-# ╔═╡ 0b0b0302-146d-11eb-0660-a170d07cd252
-is_susceptible(a::Agent) = a.status == S
+# ╔═╡ d3666ea2-148d-11eb-0c3e-f10bbfdcae05
+is_recovered(a::Agent) = a.status == R
 
 # ╔═╡ 19b9dc32-146d-11eb-0148-75485045ad74
 set_status!(a::Agent, new_status::InfectionStatus) = a.status = new_status
@@ -474,12 +480,28 @@ end
 # ╔═╡ d1bcd5c4-0a4b-11eb-1218-7531e367a7ff
 function interact!(agent::Agent, source::Agent, infection::CollisionInfectionRecovery)
 	if is_infected(source) && is_susceptible(agent) && bernoulli(infection.p_infection)
-		if agents.position == source.position
+		if agent.position == source.position
 			set_status!(agent, I)
 		end
 	elseif is_infected(agent) && bernoulli(infection.p_recovery)
 		set_status!(agent, R)
 	end
+	#return agent
+end
+
+# ╔═╡ 8fde9d4a-1471-11eb-3c48-21c2d2804efb
+md"""
+Testing the code above
+"""
+
+# ╔═╡ 6219803c-1471-11eb-23ae-2fb7e5e30547
+let
+	N = 10
+	L = 1
+	my_infection = CollisionInfectionRecovery(0.1, 0.02)
+	agents = initialize(N, L)
+	interact!(Agent(Coordinate(0,0), S), Agent(Coordinate(0,0), I), my_infection)
+	
 end
 
 # ╔═╡ 34778744-0a5f-11eb-22b6-abe8b8fc34fd
@@ -499,10 +521,34 @@ Your turn!
 """
 
 # ╔═╡ 24fe0f1a-0a69-11eb-29fe-5fb6cbf281b8
-# function step!(agents::Vector, L::Number, infection::AbstractInfection)
-	
-# 	return missing
-# end
+function step!(agents::Vector, L::Number, infection::AbstractInfection)
+	shuffled_agents = Random.shuffle(agents)
+	source = shuffled_agents[1]
+	source.position = trajectory(source.position, 1, L)[1]
+	for agent in shuffled_agents[2:end]
+		interact!(agent, source, infection)
+	end
+
+end
+
+# ╔═╡ 1eccd1f8-1476-11eb-24c1-832fa92fe989
+md"""
+testing `step!` function
+"""
+
+# ╔═╡ 3a165a60-1476-11eb-3a22-ad0e2cc2b4d3
+let 
+	N = 100
+	L = 5
+	my_infection = CollisionInfectionRecovery(0.9, 0.0001)
+	agents = initialize(N, L)
+	p1 = visualize(agents, L)
+	for i = 1:500
+		step!(agents, L, my_infection)
+	end
+	p2 = visualize(agents, L)
+	plot(p1, p2, layout = 2)
+end
 
 # ╔═╡ 1fc3271e-0a45-11eb-0e8d-0fd355f5846b
 md"""
@@ -525,18 +571,22 @@ plot(plot_before, plot_after)
 pandemic = CollisionInfectionRecovery(0.5, 0.00001)
 
 # ╔═╡ 4e7fd58a-0a62-11eb-1596-c717e0845bd5
-@bind k_sweeps Slider(1:10000, default=1000)
+@bind k_sweeps Slider(1:10000, default=1000, show_value = true)
 
 # ╔═╡ 778c2490-0a62-11eb-2a6c-e7fab01c6822
-# let
-# 	N = 50
-# 	L = 40
+let
+	N = 50
+	L = 20
 	
-# 	plot_before = plot(1:3) # replace with your code
-# 	plot_after = plot(1:3)
-	
-# 	plot(plot_before, plot_after)
-# end
+	my_infection = CollisionInfectionRecovery(1, 0.001)
+	agents = initialize(N, L)
+	plot_before = visualize(agents, L)
+	for i = 1:k_sweeps
+		step!(agents, L, pandemic)
+	end
+	plot_after= visualize(agents, L)
+ 	plot(plot_before, plot_after)
+ end
 
 # ╔═╡ e964c7f0-0a61-11eb-1782-0b728fab1db0
 md"""
@@ -551,13 +601,28 @@ Every time that you move the slider, a completely new simulation is created an r
 k_sweep_max = 10000
 
 # ╔═╡ ef27de84-0a63-11eb-177f-2197439374c5
-let
+"""let
 	N = 50
-	L = 30
+	L = 20
 	
-	# agents = initialize(N, L)
-	# compute k_sweep_max number of sweeps and plot the SIR
+	agents = initialize(N, L)
+	#compute k_sweep_max number of sweeps and plot the SIR
+	S_count = []
+	I_count = []
+	R_count = []
+	for i = 1:k_sweep_max
+		step!(agents, L, pandemic)
+		push!(S_count, count(is_susceptible.(agents)))
+		push!(I_count, count(is_infected.(agents)))
+		push!(R_count, N - S_count[end] - I_count[end])
+	end
+	p = plot()
+	scatter!(p, S_count, color = :blue, alpha = 0.1)
+	scatter!(p, I_count, color = :red, alpha = 0.1)
+	scatter!(p, R_count, color = :green, alpha = 0.2)
+	p
 end
+"""
 
 # ╔═╡ 201a3810-0a45-11eb-0ac9-a90419d0b723
 md"""
@@ -571,13 +636,47 @@ Let's make our plot come alive! There are two options to make our visualization 
 This an optional exercise, and our solution to 2️⃣ is given below.
 """
 
+# ╔═╡ fd014d00-148f-11eb-340a-87f9d082bc49
+function count_SIR(a)
+	S = count(is_susceptible.(a))
+	I = count(is_infected.(a))
+	R = count(is_recovered.(a))
+	return (S, I, R)
+end
+
+
 # ╔═╡ e5040c9e-0a65-11eb-0f45-270ab8161871
-# let
-# 	N = 50
-# 	L = 30
-	
-# 	missing
-# end
+let
+    N = 100
+    L = 20
+
+    x = initialize(N, L)
+    
+    # initialize to empty arrays
+    Ss, Is, Rs = Int[], Int[], Int[]
+    
+    Tmax = 2000
+    deepcopy
+    @gif for t in 1:Tmax
+        for i in 1:5N
+            step!(x, L, pandemic)
+        end
+
+        #... track S, I, R in Ss Is and Rs
+        push!(Ss, count(is_susceptible.(x)))
+		push!(Is, count(is_infected.(x)))
+		push!(Rs, count(is_recovered.(x)))
+		
+        left = visualize(x, L)
+    
+        right = plot(xlim=(1,Tmax), ylim=(1,N), size=(600,300))
+        plot!(right, 1:t, Ss, color=color(S), label="S")
+        plot!(right, 1:t, Is, color=color(I), label="I")
+        plot!(right, 1:t, Rs, color=color(R), label="R")
+    
+        plot(left, right)
+    end
+end
 
 # ╔═╡ 2031246c-0a45-11eb-18d3-573f336044bf
 md"""
@@ -586,13 +685,36 @@ md"""
 """
 
 # ╔═╡ 63dd9478-0a45-11eb-2340-6d3d00f9bb5f
-causes_outbreak = CollisionInfectionRecovery(0.5, 0.001)
+causes_outbreak = CollisionInfectionRecovery(0.9, 0.00001)
 
 # ╔═╡ 269955e4-0a46-11eb-02cc-1946dc918bfa
-does_not_cause_outbreak = CollisionInfectionRecovery(0.5, 0.001)
+does_not_cause_outbreak = CollisionInfectionRecovery(0.4, 1e-4)
 
 # ╔═╡ 4d4548fe-0a66-11eb-375a-9313dc6c423d
+let 
+	L = 20
+	N = 100
+	
+	x = initialize(N, L)
+	Ss, Is, Rs, = Int[], Int[], Int[]
+	
+	t_max = 1000
+	for t = 1:t_max
+		for i = 1:N
+			step!(x, L, does_not_cause_outbreak)
+		end
+		S, I, R = count_SIR(x)
+		push!(Ss, S)
+		push!(Is, I)
+		push!(Rs, R)
+	end
+	right = plot(xlim=(1,t_max), ylim=(1,N), size=(600,300))
+    plot!(right, 1:t_max, Ss, color=color(S), label="S")
+    plot!(right, 1:t_max, Is, color=color(I), label="I")
+    plot!(right, 1:t_max, Rs, color=color(R), label="R")
+end
 
+			
 
 # ╔═╡ 20477a78-0a45-11eb-39d7-93918212a8bc
 md"""
@@ -605,7 +727,7 @@ md"""
 
 # ╔═╡ b1b1afda-0a66-11eb-2988-752405815f95
 need_different_parameters_because = md"""
-i say so
+the probability of infection is altered because intheis problem we take in consideration he position of the agents, not only a binomial probability of infection
 """
 
 # ╔═╡ 05c80a0c-09a0-11eb-04dc-f97e306f1603
@@ -1039,22 +1161,29 @@ bigbreak
 # ╠═e6dd8258-0a4b-11eb-24cb-fd5b3554381b
 # ╠═de88b530-0a4b-11eb-05f7-85171594a8e8
 # ╟─80f39140-0aef-11eb-21f7-b788c5eab5c9
-# ╠═ddae24c6-146c-11eb-0d07-e30036368e87
 # ╠═0b0b0302-146d-11eb-0660-a170d07cd252
+# ╠═ddae24c6-146c-11eb-0d07-e30036368e87
+# ╠═d3666ea2-148d-11eb-0c3e-f10bbfdcae05
 # ╠═19b9dc32-146d-11eb-0148-75485045ad74
 # ╠═520fab5c-146d-11eb-1b46-6bf2701dba2d
 # ╠═d1bcd5c4-0a4b-11eb-1218-7531e367a7ff
+# ╟─8fde9d4a-1471-11eb-3c48-21c2d2804efb
+# ╠═6219803c-1471-11eb-23ae-2fb7e5e30547
 # ╟─34778744-0a5f-11eb-22b6-abe8b8fc34fd
+# ╠═2c9dd1f2-1470-11eb-145c-533ffc9696dc
 # ╠═24fe0f1a-0a69-11eb-29fe-5fb6cbf281b8
+# ╟─1eccd1f8-1476-11eb-24c1-832fa92fe989
+# ╠═3a165a60-1476-11eb-3a22-ad0e2cc2b4d3
 # ╟─1fc3271e-0a45-11eb-0e8d-0fd355f5846b
 # ╟─18552c36-0a4d-11eb-19a0-d7d26897af36
-# ╠═4e7fd58a-0a62-11eb-1596-c717e0845bd5
+# ╟─4e7fd58a-0a62-11eb-1596-c717e0845bd5
 # ╠═778c2490-0a62-11eb-2a6c-e7fab01c6822
 # ╟─e964c7f0-0a61-11eb-1782-0b728fab1db0
 # ╠═4d83dbd0-0a63-11eb-0bdc-757f0e721221
 # ╠═ef27de84-0a63-11eb-177f-2197439374c5
 # ╟─8475baf0-0a63-11eb-1207-23f789d00802
 # ╟─201a3810-0a45-11eb-0ac9-a90419d0b723
+# ╠═fd014d00-148f-11eb-340a-87f9d082bc49
 # ╠═e5040c9e-0a65-11eb-0f45-270ab8161871
 # ╟─f9b9e242-0a53-11eb-0c6a-4d9985ef1687
 # ╟─2031246c-0a45-11eb-18d3-573f336044bf
