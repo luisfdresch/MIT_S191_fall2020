@@ -306,16 +306,17 @@ r(t+h) &= r(t) + h\,\cdot \gamma i(t)
 `sir_0` is a 3-element vector, and you should return a new 3-element vector with the values after the timestep.
 """
 
-# ╔═╡ 1e5ca54e-12d8-11eb-18b8-39b909584c72
+# ╔═╡ cf634568-2a8a-11eb-2650-ad6242d61ed2
 function euler_SIR_step(β, γ, sir_0::Vector, h::Number)
 	s, i, r = sir_0
 	
 	return [
-		missing,
-		missing,
-		missing,
+			s - h*(β*s*i),
+			i + h*(β*s*i - γ*i),
+			r + h*(γ*i)
 	]
 end
+
 
 # ╔═╡ 84daf7c4-1244-11eb-0382-d1da633a63e2
 euler_SIR_step(0.1, 0.05, 
@@ -335,8 +336,13 @@ function euler_SIR(β, γ, sir_0::Vector, T::AbstractRange)
 	h = step(T)
 	
 	num_steps = length(T)
+	SIR_history = [sir_0]
 	
-	return missing
+	# SIR_history[1] = euler_SIR_step(β, γ, sir_0, h)
+	for a in 1:num_steps-1
+		push!(SIR_history, euler_SIR_step(β, γ, SIR_history[a], h))
+	end
+	return SIR_history
 end
 
 # ╔═╡ 4b791b76-12cd-11eb-1260-039c938f5443
@@ -346,6 +352,9 @@ sir_T = 0 : 0.1 : 60.0
 sir_results = euler_SIR(0.3, 0.15, 
 	[0.99, 0.01, 0.00], 
 	sir_T)
+
+# ╔═╡ a327b8ac-2a8e-11eb-28d0-e53b159c908e
+size(sir_results)
 
 # ╔═╡ 51c9a25e-1244-11eb-014f-0bcce2273cee
 md"""
@@ -383,8 +392,19 @@ md"""
 👉 Make an interactive visualization in which you vary $\beta$ and $\gamma$. What relation should $\beta$ and $\gamma$ have for an epidemic outbreak to occur?
 """
 
-# ╔═╡ 68274534-1103-11eb-0d62-f1acb57721bc
+# ╔═╡ 1ae141c0-2a90-11eb-087b-7d367486bbe2
+@bind interactive_β Slider(0:0.01:2, show_value = true)
 
+# ╔═╡ 3577d0e4-2a90-11eb-3165-67c5205ab14b
+@bind interactive_γ Slider(0:0.01:1, show_value = true)
+
+# ╔═╡ 4e4f322e-2a90-11eb-2be2-6974becf39f9
+interactive_sir_results = euler_SIR(interactive_β, interactive_γ, 
+	[0.99, 0.01, 0.00], 
+	sir_T) 
+
+# ╔═╡ 76c6f25a-2a90-11eb-2875-479b3e651ec7
+plot_sir!(plot(), sir_T, interactive_sir_results)
 
 # ╔═╡ 82539bbe-106e-11eb-0e9e-170dfa6a7dad
 md"""
@@ -1297,19 +1317,23 @@ end
 # ╠═990236e0-10be-11eb-333a-d3080a224d34
 # ╟─d21fad2a-1253-11eb-304a-2bacf9064d0d
 # ╟─518fb3aa-106e-11eb-0fcd-31091a8f12db
-# ╠═1e5ca54e-12d8-11eb-18b8-39b909584c72
+# ╠═cf634568-2a8a-11eb-2650-ad6242d61ed2
 # ╠═84daf7c4-1244-11eb-0382-d1da633a63e2
 # ╟─517efa24-1244-11eb-1f81-b7f95b87ce3b
 # ╠═51a0138a-1244-11eb-239f-a7413e2e44e4
 # ╠═4b791b76-12cd-11eb-1260-039c938f5443
 # ╠═0a095a94-1245-11eb-001a-b908128532aa
+# ╠═a327b8ac-2a8e-11eb-28d0-e53b159c908e
 # ╟─51c9a25e-1244-11eb-014f-0bcce2273cee
 # ╠═58675b3c-1245-11eb-3548-c9cb8a6b3188
 # ╟─b4bb4b3a-12ce-11eb-3fe5-ad7ccd73febb
 # ╟─586d0352-1245-11eb-2504-05d0aa2352c6
 # ╠═589b2b4c-1245-11eb-1ec7-693c6bda97c4
 # ╟─58b45a0e-1245-11eb-04d1-23a1f3a0f242
-# ╠═68274534-1103-11eb-0d62-f1acb57721bc
+# ╠═1ae141c0-2a90-11eb-087b-7d367486bbe2
+# ╠═3577d0e4-2a90-11eb-3165-67c5205ab14b
+# ╠═76c6f25a-2a90-11eb-2875-479b3e651ec7
+# ╠═4e4f322e-2a90-11eb-2be2-6974becf39f9
 # ╟─82539bbe-106e-11eb-0e9e-170dfa6a7dad
 # ╟─b394b44e-1245-11eb-2f86-8d10113e8cfc
 # ╠═bd8522c6-12e8-11eb-306c-c764f78486ef
