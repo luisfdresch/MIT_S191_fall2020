@@ -25,7 +25,7 @@ begin
 			Pkg.PackageSpec(name="PlutoUI", version="0.6.7-0.6"), 
 			Pkg.PackageSpec(name="Plots", version="1.6-1"),
 			])
-
+	
 	using Plots
 	gr()
 	using PlutoUI
@@ -486,7 +486,7 @@ We want to minimize a 1D function, i.e. a function $f: \mathbb{R} \to \mathbb{R}
 # ╔═╡ a7f1829c-12e8-11eb-15a1-5de40ed92587
 function gradient_descent_1d_step(f, x0; η=0.01)
 	
-	return missing
+	return x0 - finite_difference_slope(f, x0) * η
 end
 
 # ╔═╡ d33271a2-12df-11eb-172a-bd5600265f49
@@ -510,8 +510,10 @@ md"""
 
 # ╔═╡ 9489009a-12e8-11eb-2fb7-97ba0bdf339c
 function gradient_descent_1d(f, x0; η=0.01, N_steps=1000)
-	
-	return missing
+	for i = 1:N_steps
+		x0 = gradient_descent_1d_step(f, x0)
+	end
+	return x0
 end
 
 # ╔═╡ 34dc4b02-1248-11eb-26b2-5d2610cfeb41
@@ -528,7 +530,7 @@ Right now we take a fixed number of steps, even if the minimum is found quickly.
 
 # ╔═╡ ebca11d8-12c9-11eb-3dde-c546eccf40fc
 better_stopping_idea = md"""
-blabla
+Difference between two subsequent iterations is below a threshold
 """
 
 # ╔═╡ 9fd2956a-1248-11eb-266d-f558cda55702
@@ -542,13 +544,15 @@ Multivariable calculus tells us that the gradient $\nabla f(a, b)$ at a point $(
 # ╔═╡ 852be3c4-12e8-11eb-1bbb-5fbc0da74567
 function gradient_descent_2d_step(f, x0, y0; η=0.01)
 	
-	return missing
+	return [x0, y0] .- gradient(f, x0, y0) .* η
 end
 
 # ╔═╡ 8a114ca8-12e8-11eb-2de6-9149d1d3bc3d
-function gradient_descent_2d(f, x0, y0; η=0.01)
-	
-	return missing
+function gradient_descent_2d(f, x0, y0; η=0.01, N_steps = 1000)
+	for i = 1:N_steps
+		x0, y0 = gradient_descent_2d_step(f, x0, y0)
+	end
+	return x0, y0
 end
 
 # ╔═╡ 4454c2b2-12e3-11eb-012c-c362c4676bf6
@@ -561,10 +565,10 @@ md" ``x_0 = `` $(@bind x0_gradient_2d Slider(-4:.01:4, default=0, show_value=tru
 md" ``y_0 = `` $(@bind y0_gradient_2d Slider(-4:.01:4, default=0, show_value=true))"
 
 # ╔═╡ a0045046-1248-11eb-13bd-8b8ad861b29a
-himmelbau(x, y) = (x^2 + y - 11)^2 + (x + y^2 - 7)^2
+himmelblau(x, y) = (x^2 + y - 11)^2 + (x + y^2 - 7)^2
 
 # ╔═╡ 92854562-1249-11eb-0b81-156982df1284
-gradient_descent_2d(himmelbau, 0, 0)
+gradient_descent_2d(himmelblau, 0, 0)
 
 # ╔═╡ 7e318fea-12e7-11eb-3490-b17e0d4dbc50
 md"""
@@ -580,7 +584,7 @@ md"""
 """
 
 # ╔═╡ 6d1ee93e-1103-11eb-140f-63fca63f8b06
-
+md"Yes"
 
 # ╔═╡ 8261eb92-106e-11eb-2ccc-1348f232f5c3
 md"""
@@ -1189,14 +1193,14 @@ gradient_1d_viz(N_gradient_1d, x0_gradient_1d)
 function gradient_2d_viz_3d(N_gradient_2d, x0, y0)
 
 	history = accumulate(1:N_gradient_2d, init=[x0, y0]) do old, _
-		gradient_descent_2d_step(himmelbau, old...)
+		gradient_descent_2d_step(himmelblau, old...)
 	end
 	
 	all = [[x0, y0], history...]
 	
-	p = surface(-4:0.4:5, -4:0.4:4, himmelbau)
+	p = surface(-4:0.4:5, -4:0.4:4, himmelblau)
 	
-	trace = [himmelbau(s...) for s in all]
+	trace = [himmelblau(s...) for s in all]
 	
 	plot!(p, first.(all), last.(all), trace, 
 		color="blue", opacity=range(.5,step=.2,length=length(all)), label=nothing)
@@ -1229,12 +1233,12 @@ end
 function gradient_2d_viz_2d(N_gradient_2d, x0, y0)
 
 	history = accumulate(1:N_gradient_2d, init=[x0, y0]) do old, _
-		gradient_descent_2d_step(himmelbau, old...)
+		gradient_descent_2d_step(himmelblau, old...)
 	end
 	
 	all = [[x0, y0], history...]
 	
-	p = heatmap(-4:0.4:5, -4:0.4:4, himmelbau)
+	p = heatmap(-4:0.4:5, -4:0.4:4, himmelblau)
 	
 	plot!(p, first.(all), last.(all), 
 		color="blue", opacity=range(.5,step=.2,length=length(all)), label=nothing)
@@ -1283,7 +1287,7 @@ end
 # ╟─05976f0c-106a-11eb-03a4-0febbc18fae8
 # ╠═f3bb0a84-29e2-11eb-3b20-7ba057fbf748
 # ╠═05b01f6e-106a-11eb-2a88-5f523fafe433
-# ╟─0d191540-106e-11eb-1f20-bf72a75fb650
+# ╠═0d191540-106e-11eb-1f20-bf72a75fb650
 # ╟─3cd69418-10bb-11eb-2fb5-e93bac9e54a9
 # ╟─17af6a00-112b-11eb-1c9c-bfd12931491d
 # ╟─2a4050f6-112b-11eb-368a-f91d7a023c9d
@@ -1359,15 +1363,15 @@ end
 # ╠═34dc4b02-1248-11eb-26b2-5d2610cfeb41
 # ╟─f46aeaf0-1246-11eb-17aa-2580fdbcfa5a
 # ╟─e3120c18-1246-11eb-3bf4-7f4ac45856e0
-# ╠═ebca11d8-12c9-11eb-3dde-c546eccf40fc
+# ╟─ebca11d8-12c9-11eb-3dde-c546eccf40fc
 # ╟─9fd2956a-1248-11eb-266d-f558cda55702
 # ╠═852be3c4-12e8-11eb-1bbb-5fbc0da74567
 # ╠═8a114ca8-12e8-11eb-2de6-9149d1d3bc3d
 # ╠═92854562-1249-11eb-0b81-156982df1284
 # ╠═4454c2b2-12e3-11eb-012c-c362c4676bf6
-# ╟─fbb4a9a4-1248-11eb-00e2-fd346f0056db
-# ╠═4aace1a8-12e3-11eb-3e07-b5827a2a6765
-# ╠═54a58f84-12e3-11eb-10b9-7d55a16c81ba
+# ╠═fbb4a9a4-1248-11eb-00e2-fd346f0056db
+# ╟─4aace1a8-12e3-11eb-3e07-b5827a2a6765
+# ╟─54a58f84-12e3-11eb-10b9-7d55a16c81ba
 # ╠═a0045046-1248-11eb-13bd-8b8ad861b29a
 # ╟─7e318fea-12e7-11eb-3490-b17e0d4dbc50
 # ╠═605aafa4-12e7-11eb-2d13-7f7db3fac439
@@ -1375,7 +1379,7 @@ end
 # ╟─5e0f16b4-12e3-11eb-212f-e565f97adfed
 # ╟─b6ae4d7e-12e6-11eb-1f92-c95c040d4401
 # ╟─a03890d6-1248-11eb-37ee-85b0a5273e0c
-# ╠═6d1ee93e-1103-11eb-140f-63fca63f8b06
+# ╟─6d1ee93e-1103-11eb-140f-63fca63f8b06
 # ╟─8261eb92-106e-11eb-2ccc-1348f232f5c3
 # ╠═65e691e4-124a-11eb-38b1-b1732403aa3d
 # ╟─6f4aa432-1103-11eb-13da-fdd9eefc7c86
