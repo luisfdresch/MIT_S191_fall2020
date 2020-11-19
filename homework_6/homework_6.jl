@@ -428,7 +428,7 @@ You should use **anonymous functions** for this. These have the form `x -> x^2`,
 # ╔═╡ bd8522c6-12e8-11eb-306c-c764f78486ef
 function ∂x(f::Function, a, b)
 	
-	return missing
+	return finite_difference_slope(x -> f(x,b), a)
 end
 
 # ╔═╡ 321964ac-126d-11eb-0a04-0d3e3fb9b17c
@@ -440,7 +440,7 @@ end
 # ╔═╡ b7d3aa8c-12e8-11eb-3430-ff5d7df6a122
 function ∂y(f::Function, a, b)
 	
-	return missing
+	return finite_difference_slope(y -> f(a,y), b)
 end
 
 # ╔═╡ a15509ee-126c-11eb-1fa3-cdda55a47fcb
@@ -458,7 +458,7 @@ md"""
 # ╔═╡ adbf65fe-12e8-11eb-04e9-3d763ba91a63
 function gradient(f::Function, a, b)
 	
-	return missing
+	return [∂x(f, a, b), ∂y(f, a, b)]
 end
 
 # ╔═╡ 66b8e15e-126c-11eb-095e-39c2f6abc81d
