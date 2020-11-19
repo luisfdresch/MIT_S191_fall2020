@@ -770,8 +770,11 @@ This time, instead of comparing two vectors of numbers, we need to compare two v
 
 # ╔═╡ 754b5368-12e8-11eb-0763-e3ec56562c5f
 function loss_sir(β, γ)
-	
-	return missing
+	total = 0
+	for element in (euler_SIR(β, γ, hw4_results[1],  hw4_T) - hw4_results)
+		total += sum(abs.(element))
+	end
+	return total
 end
 
 # ╔═╡ ee20199a-12d4-11eb-1c2c-3f571bbb232e
@@ -785,9 +788,7 @@ md"""
 # ╔═╡ 6e1b5b6a-12e8-11eb-3655-fb10c4566cdc
 found_β, found_γ = let
 	
-	# your code here
-	
-	missing, missing
+	gradient_descent_2d(loss_sir, guess_β, guess_γ, η=1e-8, N_steps = 1000)
 end
 
 # ╔═╡ b94b7610-106d-11eb-2852-25337ce6ec3a
@@ -1441,9 +1442,9 @@ end
 # ╟─c56cc19c-12ca-11eb-3c6c-7f3ea98eeb4e
 # ╟─496b8816-12d3-11eb-3cec-c777ba81eb60
 # ╟─480fde46-12d4-11eb-2dfb-1b71692c7420
-# ╠═4837e1ae-12d2-11eb-0df9-21dcc1892fc9
-# ╠═a9630d28-12d2-11eb-196b-773d8498b0bb
-# ╠═23c53be4-12d4-11eb-1d39-8d11b4431993
+# ╟─4837e1ae-12d2-11eb-0df9-21dcc1892fc9
+# ╟─a9630d28-12d2-11eb-196b-773d8498b0bb
+# ╟─23c53be4-12d4-11eb-1d39-8d11b4431993
 # ╟─6016fccc-12d4-11eb-0f58-b9cd331cc7b3
 # ╠═754b5368-12e8-11eb-0763-e3ec56562c5f
 # ╠═ee20199a-12d4-11eb-1c2c-3f571bbb232e
