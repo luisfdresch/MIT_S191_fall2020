@@ -31,6 +31,9 @@ begin
 	using PlutoUI
 end
 
+# ╔═╡ 63df7e1c-2ab5-11eb-097d-e52157792dcb
+using Printf
+
 # ╔═╡ 048890ee-106a-11eb-1a81-5744150543e8
 md"_homework 6, version 0_"
 
@@ -550,7 +553,7 @@ end
 # ╔═╡ 8a114ca8-12e8-11eb-2de6-9149d1d3bc3d
 function gradient_descent_2d(f, x0, y0; η=0.01, N_steps = 1000)
 	for i = 1:N_steps
-		x0, y0 = gradient_descent_2d_step(f, x0, y0)
+		x0, y0 = gradient_descent_2d_step(f, x0, y0; η)
 	end
 	return x0, y0
 end
@@ -659,12 +662,15 @@ $$\mathcal{L}(\mu, \sigma) := \sum_i [f_{\mu, \sigma}(x_i) - y_i]^2$$
 
 # ╔═╡ 2fc55daa-124f-11eb-399e-659e59148ef5
 function loss_dice(μ, σ)
-	
-	return missing
+	# dice_x, dice_y = dice_frequencies(10, 20_000)
+	return sum((gauss.(dice_x, [μ], [σ]) .- dice_y).^2) 
 end
 
 # ╔═╡ 3a6ec2e4-124f-11eb-0f68-791475bab5cd
 loss_dice(guess_μ + 3, guess_σ) >
+loss_dice(guess_μ, guess_σ)
+
+# ╔═╡ 8c9c77ee-2aae-11eb-0b4a-7fd479bf35cb
 loss_dice(guess_μ, guess_σ)
 
 # ╔═╡ 2fcb93aa-124f-11eb-10de-55fced6f4b83
@@ -675,9 +681,9 @@ md"""
 # ╔═╡ a150fd60-124f-11eb-35d6-85104bcfd0fe
 found_μ, found_σ = let
 	
-	# your code here
+	gradient_descent_2d(loss_dice, 30, 1, η=5, N_steps = 1000)
 	
-	missing, missing
+
 end
 
 # ╔═╡ ac320522-124b-11eb-1552-51c2adaf2521
@@ -1249,8 +1255,32 @@ function gradient_2d_viz_2d(N_gradient_2d, x0, y0)
 	as_svg(p)
 end
 
+# ╔═╡ f80f4b82-2aae-11eb-21d5-6f939e84a559
+function gradient_2d_viz_2d(f::Function, N_gradient_2d, x0, y0, η = 0.01)
+
+	history = accumulate(1:N_gradient_2d, init=[x0, y0]) do old, _
+		gradient_descent_2d_step(f, old...; η)
+	end
+	
+	all = [[x0, y0], history...]
+	
+	p = heatmap(30:0.5:40, 0.5:0.2:6, f)
+	
+	plot!(p, first.(all), last.(all), 
+		color="blue", opacity=range(.5,step=.2,length=length(all)), label=nothing)
+	scatter!(p, first.(all), last.(all), 
+		color="blue", label="gradient descent", 
+		markersize=3, markerstrokewidth=0)
+	annotate!([(35,3, @sprintf("%.3f", history[end][1]), :white)])
+	annotate!([(35,2, @sprintf("%.3f", history[end][2]), :white)])
+	as_svg(p)
+end
+
 # ╔═╡ fbb4a9a4-1248-11eb-00e2-fd346f0056db
 gradient_2d_viz_2d(N_gradient_2d, x0_gradient_2d, y0_gradient_2d)
+
+# ╔═╡ 259b1798-2aaf-11eb-207c-3378f3c9536d
+gradient_2d_viz_2d(loss_dice, 1200, 30, 1, 4)
 
 # ╔═╡ 496b8816-12d3-11eb-3cec-c777ba81eb60
 let
@@ -1377,24 +1407,28 @@ end
 # ╠═605aafa4-12e7-11eb-2d13-7f7db3fac439
 # ╟─9ae4ebac-12e3-11eb-0acc-23113f5264a9
 # ╟─5e0f16b4-12e3-11eb-212f-e565f97adfed
-# ╟─b6ae4d7e-12e6-11eb-1f92-c95c040d4401
+# ╠═b6ae4d7e-12e6-11eb-1f92-c95c040d4401
 # ╟─a03890d6-1248-11eb-37ee-85b0a5273e0c
 # ╟─6d1ee93e-1103-11eb-140f-63fca63f8b06
 # ╟─8261eb92-106e-11eb-2ccc-1348f232f5c3
 # ╠═65e691e4-124a-11eb-38b1-b1732403aa3d
 # ╟─6f4aa432-1103-11eb-13da-fdd9eefc7c86
 # ╠═dbe9635a-124b-11eb-111d-fb611954db56
-# ╟─ac320522-124b-11eb-1552-51c2adaf2521
+# ╠═ac320522-124b-11eb-1552-51c2adaf2521
 # ╟─57090426-124e-11eb-0a17-1566ae96b7c2
-# ╠═66192a74-124c-11eb-0c6a-d74aecb4c624
-# ╠═70f0fe9c-124c-11eb-3dc6-e102e68673d9
-# ╠═41b2262a-124e-11eb-2634-4385e2f3c6b6
-# ╠═0dea1f70-124c-11eb-1593-e535ab21976c
+# ╟─66192a74-124c-11eb-0c6a-d74aecb4c624
+# ╟─70f0fe9c-124c-11eb-3dc6-e102e68673d9
+# ╟─41b2262a-124e-11eb-2634-4385e2f3c6b6
+# ╟─0dea1f70-124c-11eb-1593-e535ab21976c
 # ╟─471cbd84-124c-11eb-356e-371d23011af5
 # ╠═2fc55daa-124f-11eb-399e-659e59148ef5
 # ╠═3a6ec2e4-124f-11eb-0f68-791475bab5cd
+# ╠═8c9c77ee-2aae-11eb-0b4a-7fd479bf35cb
 # ╟─2fcb93aa-124f-11eb-10de-55fced6f4b83
 # ╠═a150fd60-124f-11eb-35d6-85104bcfd0fe
+# ╠═259b1798-2aaf-11eb-207c-3378f3c9536d
+# ╠═63df7e1c-2ab5-11eb-097d-e52157792dcb
+# ╠═f80f4b82-2aae-11eb-21d5-6f939e84a559
 # ╟─3f5e88bc-12c8-11eb-2d74-51f2f5060928
 # ╠═c569a5d8-1267-11eb-392f-452de141161b
 # ╠═e55d9c1e-1267-11eb-1b3c-5d772662518a
