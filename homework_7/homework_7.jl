@@ -287,16 +287,6 @@ If $D$ is _negative_ (or zero), then the wall is _behind_ the photon - we should
 We are using _floating points_ (`Float64`) to store positions, distances, etc., which means that we need to account for small errors. Like in the lecture, we will not check for `D > 0`, but `D > ϵ` with `ϵ = 1e-3`.
 """
 
-# ╔═╡ a5847264-1ca0-11eb-0b45-eb5388f6e688
-function intersection(photon::Photon, wall::Wall; ϵ=1e-3)
-	D = intersection_distance(photon, wall)
-	if D > ϵ
-		return Intersection(wall, D, photon.p + D*photon.l)
-	else 
-		return Miss()
-	end
-end
-
 # ╔═╡ 7f286ccc-1c75-11eb-1270-95a87840b300
 @bind dizzy_angle Slider(0:0.0001:2π, default=2.2)
 
@@ -592,10 +582,50 @@ With all this said, we are ready to write some code.
 👉 Write a new method `intersection` that takes a `Photon` and a `Sphere`, and returns either a `Miss` or an `Intersection`, using the method described above. Go back to Exercise 1.3 where we defined the first method, and see how we adapt it to a sphere.
 """
 
+# ╔═╡ 28855632-2b75-11eb-0733-6b604ffbd774
+test = [-5, 3]
+
+# ╔═╡ 705d6ace-2b72-11eb-3df6-cb6e1bed38d3
+function intersection_distance(photon::Photon, sphere::Sphere)
+	a = 1 #photon.l ⋅ photon.l  is always equal to 1 
+	b = (2 .* photon.l) ⋅ (photon.p - sphere.center)
+	c = ((photon.p - sphere.center) ⋅ (photon.p - sphere.center) )- sphere.radius^2
+	Δ = b^2 - 4*a*c
+	if Δ < 0 return -1 end
+	if Δ == 0 && b <= 0 return "test" end
+	root = [(-b + sqrt(Δ)) / 2a, (-b - sqrt(Δ)) / 2a]
+	if root[1] < 0
+		if root[2] < 0
+			return -2
+		else
+			return root[2]
+		end
+	elseif root[2] < 0
+		return root[1]
+	else return minimum(root)
+	end
+	
+end
+
+# ╔═╡ a5847264-1ca0-11eb-0b45-eb5388f6e688
+function intersection(photon::Photon, wall::Wall; ϵ=1e-3)
+	D = intersection_distance(photon, wall)
+	if D > ϵ
+		return Intersection(wall, D, photon.p + D*photon.l)
+	else 
+		return Miss()
+	end
+end
+
 # ╔═╡ 392fe192-1ca1-11eb-36c4-f9bd2b01a5e5
 function intersection(photon::Photon, sphere::Sphere; ϵ=1e-3)
 	
-	return missing
+	D = intersection_distance(photon, sphere)
+	if D > ϵ
+		return Intersection(sphere, D, photon.p + D*photon.l)
+	else 
+		return Miss()
+	end
 end
 
 # ╔═╡ a306e880-19eb-11eb-0ff1-d7ef49777f63
@@ -657,7 +687,7 @@ end
 
 # ╔═╡ af5c6bea-1c9c-11eb-35ae-250337e4fc86
 test_sphere = Sphere(
-	[7, -6],
+	[3, 0],
 	2,
 	1.5,
 )
@@ -1141,13 +1171,15 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─e2a8d1d6-1add-11eb-0da1-cda1492a950c
 # ╟─337918f4-194f-11eb-0b45-b13fef3b23bf
 # ╟─492b257a-194f-11eb-17fb-f770b4d3da2e
+# ╠═28855632-2b75-11eb-0733-6b604ffbd774
+# ╠═705d6ace-2b72-11eb-3df6-cb6e1bed38d3
 # ╠═392fe192-1ca1-11eb-36c4-f9bd2b01a5e5
 # ╠═251f0262-1a0c-11eb-39a3-09be67091dc8
-# ╠═83aa9cea-1a0c-11eb-281d-699665da2b4f
+# ╟─83aa9cea-1a0c-11eb-281d-699665da2b4f
 # ╠═af5c6bea-1c9c-11eb-35ae-250337e4fc86
 # ╠═b3ab93d2-1a0b-11eb-0f5a-cdca19af3d89
 # ╟─71dc652e-1c9c-11eb-396c-cfd9ee2261fe
-# ╠═584ce620-1935-11eb-177a-f75d9ad8a399
+# ╟─584ce620-1935-11eb-177a-f75d9ad8a399
 # ╟─78915326-1937-11eb-014f-fff29b3660a0
 # ╠═14dc73d2-1a0d-11eb-1a3c-0f793e74da9b
 # ╠═71b70da6-193e-11eb-0bc4-f309d24fd4ef
