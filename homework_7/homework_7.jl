@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.6
+# v0.12.11
 
 using Markdown
 using InteractiveUtils
@@ -13,15 +13,20 @@ macro bind(def, element)
     end
 end
 
+# ╔═╡ e9b4b28e-2b5d-11eb-106a-158a44e4b9c0
+begin
+	using Pkg
+	Pkg.activate("/home/luisfdresch/Documents/2020.2/MIT_S191_fall2020")
+end
+
 # ╔═╡ c3e52bf2-ca9a-11ea-13aa-03a4335f2906
 begin
-	import Pkg
-	Pkg.activate(mktempdir())
 	Pkg.add([
 			Pkg.PackageSpec(name="Plots", version="1.6-1"),
 			Pkg.PackageSpec(name="PlutoUI", version="0.6.8-0.6"),
 			])
 	using Plots
+	gr()
 	using PlutoUI
 	using LinearAlgebra
 end
@@ -157,7 +162,10 @@ box_scene = [
 		[0,-10],
 		[0,1]
 		),
-	# your code here
+	Wall(
+		[0,10],
+		[0,-1]
+		)
 	]
 
 # ╔═╡ 293776f8-1ac4-11eb-21db-9d023c09e89f
@@ -259,7 +267,7 @@ where $p$ is the position, $\hat \ell$ is the direction of the light, and $\hat 
 # ╔═╡ abe3de54-1ca0-11eb-01cd-11fe798bfb97
 function intersection_distance(photon::Photon, wall::Wall)
 	
-	return missing
+	return -((photon.p - wall.position) ⋅ wall.normal)/(photon.l ⋅ wall.normal)
 end
 
 # ╔═╡ 42d65f56-1aca-11eb-1079-e32f85554349
@@ -281,8 +289,12 @@ We are using _floating points_ (`Float64`) to store positions, distances, etc., 
 
 # ╔═╡ a5847264-1ca0-11eb-0b45-eb5388f6e688
 function intersection(photon::Photon, wall::Wall; ϵ=1e-3)
-	
-	return missing
+	D = intersection_distance(photon, wall)
+	if D > ϵ
+		return Intersection(wall, D, photon.p + D*photon.l)
+	else 
+		return Miss()
+	end
 end
 
 # ╔═╡ 7f286ccc-1c75-11eb-1270-95a87840b300
@@ -348,15 +360,6 @@ By taking the minimum, we have found our closest hit! Let's turn this into a fun
 
 👉 Write a function `closest_hit` that takes a `photon` and a vector of objects. Calculate the vector of `Intersection`s/`Miss`es, and return the `minimum`.
 """
-
-# ╔═╡ 19cf420e-1c7c-11eb-1cb8-dd939fee1276
-function closest_hit(photon::Photon, objects::Vector{<:Object})
-	
-	return missing
-end
-
-# ╔═╡ b8cd4112-1c7c-11eb-3b2d-29170ad9beb5
-test_closest = closest_hit(philip, ex_1_scene)
 
 # ╔═╡ e9c6a0b8-1ad0-11eb-1606-0319caf0948a
 md"""
@@ -516,17 +519,6 @@ let
 	plot_photon_arrow!(p, philip, 5)
 end
 
-# ╔═╡ a99c40bc-1c7c-11eb-036b-7fe6e9b937e5
-let
-	p = plot_scene(ex_1_scene)
-	
-	plot_photon_arrow!(p, philip, 4; label="Philip")
-	
-	scatter!(p, test_closest.point[1:1], test_closest.point[2:2], label="Closest hit")
-	
-	p |> as_svg
-end
-
 # ╔═╡ 1ee0787e-1a08-11eb-233b-43a654f70117
 let
 	p = plot_scene(ex_1_scene, legend=false, xlim=(-11,11), ylim=(-11,11))
@@ -665,6 +657,25 @@ sort(all_intersections)
 
 # ╔═╡ 63ef21c6-1c7a-11eb-2f3c-c5ac16bc289f
 minimum(all_intersections)
+
+# ╔═╡ 19cf420e-1c7c-11eb-1cb8-dd939fee1276
+function closest_hit(photon::Photon, objects::Vector{<:Object})
+	return minimum([intersection(photon, o) for o in objects])
+end
+
+# ╔═╡ b8cd4112-1c7c-11eb-3b2d-29170ad9beb5
+test_closest = closest_hit(philip, ex_1_scene)
+
+# ╔═╡ a99c40bc-1c7c-11eb-036b-7fe6e9b937e5
+let
+	p = plot_scene(ex_1_scene)
+	
+	plot_photon_arrow!(p, philip, 4; label="Philip")
+	
+	scatter!(p, test_closest.point[1:1], test_closest.point[2:2], label="Closest hit")
+	
+	p |> as_svg
+end
 
 # ╔═╡ af5c6bea-1c9c-11eb-35ae-250337e4fc86
 test_sphere = Sphere(
@@ -1045,6 +1056,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─1e109620-19c4-11eb-013e-1bc95c14c2ba
 # ╟─1e202680-19c4-11eb-29a7-99061b886b3c
 # ╟─1e2cd0b0-19c4-11eb-3583-0b82092139aa
+# ╠═e9b4b28e-2b5d-11eb-106a-158a44e4b9c0
 # ╠═c3e52bf2-ca9a-11ea-13aa-03a4335f2906
 # ╟─92290e54-1940-11eb-1a24-5d1eaee9f6ca
 # ╠═d851a202-1ca0-11eb-3da0-51fcb656783c
@@ -1080,7 +1092,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─038d5e88-1ac7-11eb-2020-a9d7e19feebc
 # ╟─6544be90-19d3-11eb-153c-218025f738c6
 # ╠═a306e880-19eb-11eb-0ff1-d7ef49777f63
-# ╟─3663bf80-1a06-11eb-3596-8fbbed28cc38
+# ╠═3663bf80-1a06-11eb-3596-8fbbed28cc38
 # ╟─7f286ccc-1c75-11eb-1270-95a87840b300
 # ╟─d70380a4-1ad0-11eb-1184-f7e9b84a83ad
 # ╠═55187168-1c78-11eb-1182-ab4336b577a4
@@ -1165,4 +1177,3 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─ec7638e0-19c3-11eb-1ca1-0b3aa3b40240
 # ╟─ec85c940-19c3-11eb-3375-a90735beaec1
 # ╠═8cfa4902-1ad3-11eb-03a1-736898ff9cef
-
