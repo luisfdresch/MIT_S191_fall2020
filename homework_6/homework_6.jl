@@ -777,6 +777,9 @@ function loss_sir(β, γ)
 	return total
 end
 
+# ╔═╡ 023d1ad8-2b38-11eb-2087-413665b2f0da
+SIR_heatmap = heatmap(0:0.0001:0.04, 0:0.00001:0.004, loss_sir)
+
 # ╔═╡ ee20199a-12d4-11eb-1c2c-3f571bbb232e
 loss_sir(guess_β, guess_γ)
 
@@ -788,7 +791,7 @@ md"""
 # ╔═╡ 6e1b5b6a-12e8-11eb-3655-fb10c4566cdc
 found_β, found_γ = let
 	
-	gradient_descent_2d(loss_sir, guess_β, guess_γ, η=1e-8, N_steps = 1000)
+	gradient_descent_2d(loss_sir, guess_β, guess_γ, η=1e-9, N_steps = 1000)
 end
 
 # ╔═╡ b94b7610-106d-11eb-2852-25337ce6ec3a
@@ -1309,6 +1312,31 @@ let
 	as_svg(p)
 end
 
+# ╔═╡ 20af7846-2b36-11eb-0579-89f04eb9a688
+function gradient_2d_viz_2d_SIR(f::Function, N_gradient_2d, x0, y0, p; η = 0.01)
+
+	history = accumulate(1:N_gradient_2d, init=[x0, y0]) do old, _
+		gradient_descent_2d_step(f, old...; η)
+	end
+	
+	all = [[x0, y0], history...]
+	
+	
+	
+	plot!(p, first.(all), last.(all), 
+		color="blue", opacity=range(.5,step=.2,length=length(all)), label=nothing)
+	scatter!(p, first.(all), last.(all), 
+		color="blue", label="gradient descent", 
+		markersize=3, markerstrokewidth=0)
+	annotate!([(35,3, @sprintf("%.3f", history[end][1]), :white)])
+	annotate!([(35,2, @sprintf("%.3f", history[end][2]), :white)])
+	as_svg(p)
+end
+
+# ╔═╡ 37216756-2b36-11eb-1841-6d492615f038
+gradient_2d_viz_2d_SIR(loss_sir, 1000, guess_β, guess_γ, η=0.5e-9, SIR_heatmap)
+
+
 # ╔═╡ Cell order:
 # ╟─048890ee-106a-11eb-1a81-5744150543e8
 # ╟─0565af4c-106a-11eb-0d38-2fb84493d86f
@@ -1441,16 +1469,19 @@ end
 # ╟─249c297c-12ce-11eb-2054-d1e926335148
 # ╟─c56cc19c-12ca-11eb-3c6c-7f3ea98eeb4e
 # ╟─496b8816-12d3-11eb-3cec-c777ba81eb60
+# ╠═37216756-2b36-11eb-1841-6d492615f038
 # ╟─480fde46-12d4-11eb-2dfb-1b71692c7420
 # ╟─4837e1ae-12d2-11eb-0df9-21dcc1892fc9
 # ╟─a9630d28-12d2-11eb-196b-773d8498b0bb
 # ╟─23c53be4-12d4-11eb-1d39-8d11b4431993
+# ╠═023d1ad8-2b38-11eb-2087-413665b2f0da
 # ╟─6016fccc-12d4-11eb-0f58-b9cd331cc7b3
 # ╠═754b5368-12e8-11eb-0763-e3ec56562c5f
 # ╠═ee20199a-12d4-11eb-1c2c-3f571bbb232e
 # ╟─38b09bd8-12d5-11eb-2f7b-579e9db3973d
 # ╠═6e1b5b6a-12e8-11eb-3655-fb10c4566cdc
 # ╟─106670f2-12d6-11eb-1854-5bf0fc6f4dfb
+# ╠═20af7846-2b36-11eb-0579-89f04eb9a688
 # ╟─b94b7610-106d-11eb-2852-25337ce6ec3a
 # ╟─112eb7b2-1428-11eb-1c60-15105fa0e5fa
 # ╠═5ac7dcea-1429-11eb-1429-0fdbd4e9b5b1
