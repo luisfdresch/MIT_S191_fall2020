@@ -394,7 +394,7 @@ md"""
 """
 
 # ╔═╡ 79532662-1c7e-11eb-2edf-57e7cfbc1eda
-
+reflect([1,1], [1,0])
 
 # ╔═╡ b6614d80-194b-11eb-1edb-dba3c29672f8
 md"""
@@ -407,8 +407,8 @@ Our event-driven simulation is a stepping method, but instead of taking small st
 
 # ╔═╡ 2c6defd0-1ca1-11eb-17db-d5cb498f3265
 function interact(photon::Photon, hit::Intersection{Wall})
-	
-	return missing
+	return Photon(hit.point, reflect(photon.l, hit.object.normal), photon.ior)
+
 end
 
 # ╔═╡ 3f727a2c-1c80-11eb-3608-e55ccb9786d9
@@ -427,12 +427,6 @@ md"""
 
 👉 Write a function `trace` that takes an initial `Photon`, a vector of `Object`s and `N`, the number of steps to make. Return a vector of `Photon`s. Try to use `accumulate`.
 """
-
-# ╔═╡ 1a43b70c-1ca3-11eb-12a5-a94ebbba0e86
-function trace(photon::Photon, scene::Vector{<:Object}, N)
-	
-	return missing
-end
 
 # ╔═╡ 3cd36ac0-1a09-11eb-1818-75b36e67594a
 @bind mirror_test_ray_N Slider(1:30; default=4)
@@ -518,22 +512,6 @@ let
 	p = plot_scene(ex_1_scene, legend=false, size=(400,200))
 	plot_photon_arrow!(p, philip, 5)
 end
-
-# ╔═╡ 1ee0787e-1a08-11eb-233b-43a654f70117
-let
-	p = plot_scene(ex_1_scene, legend=false, xlim=(-11,11), ylim=(-11,11))
-	
-	path = trace(philip, ex_1_scene, mirror_test_ray_N)
-	
-	
-	line = [philip.p, [r.p for r in path]...]
-	plot!(p, first.(line), last.(line), lw=5, color=:pink)
-	
-	plot_photon_arrow!(p, philip)
-	plot_photon_arrow!.([p], path)
-	
-	p
-end |> as_svg
 
 # ╔═╡ e5c0e960-19cc-11eb-107d-39b397a783ab
 example_sphere = Sphere(
@@ -832,6 +810,30 @@ function step_ray(photon::Photon, objects::Vector{<:Object})
 	interact(photon, hit)
 end
 
+# ╔═╡ 1a43b70c-1ca3-11eb-12a5-a94ebbba0e86
+function trace(photon::Photon, scene::Vector{<:Object}, N)
+	path = accumulate(1:N; init = photon ) do old_photon, i
+		step_ray(old_photon, scene)
+	end
+	return path
+end
+
+# ╔═╡ 1ee0787e-1a08-11eb-233b-43a654f70117
+let
+	p = plot_scene(ex_1_scene, legend=false, xlim=(-11,11), ylim=(-11,11))
+	
+	path = trace(philip, ex_1_scene, mirror_test_ray_N)
+	
+	
+	line = [philip.p, [r.p for r in path]...]
+	plot!(p, first.(line), last.(line), lw=5, color=:pink)
+	
+	plot_photon_arrow!(p, philip)
+	plot_photon_arrow!.([p], path)
+	
+	p
+end |> as_svg
+
 # ╔═╡ dced1fd0-1c9e-11eb-3226-17dc1e09e018
 md"""
 To test your code, modify the definition of `test_lens_photon` and `test_lens` below.
@@ -1128,7 +1130,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─a45e1012-194d-11eb-3252-bb89daed3c8d
 # ╟─7ba5dda0-1ad1-11eb-1c4e-2391c11f54b3
 # ╠═1a43b70c-1ca3-11eb-12a5-a94ebbba0e86
-# ╟─3cd36ac0-1a09-11eb-1818-75b36e67594a
+# ╠═3cd36ac0-1a09-11eb-1818-75b36e67594a
 # ╟─1ee0787e-1a08-11eb-233b-43a654f70117
 # ╟─7478330a-1c81-11eb-2f9f-099f1111032c
 # ╟─ba0a869a-1ad1-11eb-091f-916e9151f052
@@ -1141,11 +1143,11 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─492b257a-194f-11eb-17fb-f770b4d3da2e
 # ╠═392fe192-1ca1-11eb-36c4-f9bd2b01a5e5
 # ╠═251f0262-1a0c-11eb-39a3-09be67091dc8
-# ╟─83aa9cea-1a0c-11eb-281d-699665da2b4f
+# ╠═83aa9cea-1a0c-11eb-281d-699665da2b4f
 # ╠═af5c6bea-1c9c-11eb-35ae-250337e4fc86
 # ╠═b3ab93d2-1a0b-11eb-0f5a-cdca19af3d89
 # ╟─71dc652e-1c9c-11eb-396c-cfd9ee2261fe
-# ╟─584ce620-1935-11eb-177a-f75d9ad8a399
+# ╠═584ce620-1935-11eb-177a-f75d9ad8a399
 # ╟─78915326-1937-11eb-014f-fff29b3660a0
 # ╠═14dc73d2-1a0d-11eb-1a3c-0f793e74da9b
 # ╠═71b70da6-193e-11eb-0bc4-f309d24fd4ef
@@ -1160,7 +1162,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─83acf10e-1c9e-11eb-3426-bb28e7bc6c79
 # ╟─13fef49c-1c9e-11eb-2aa3-d3aa2bfd0d57
 # ╟─c492a1f8-1a0c-11eb-2c38-5921c39cf5f8
-# ╟─b65d9a0c-1a0c-11eb-3cd5-e5a2c4302c7e
+# ╠═b65d9a0c-1a0c-11eb-3cd5-e5a2c4302c7e
 # ╟─c00eb0a6-cab2-11ea-3887-070ebd8d56e2
 # ╟─3dd0a48c-1ca3-11eb-1127-e7c43b5d1666
 # ╠═270762e4-1ca4-11eb-2fb4-392e5c3b3e04
