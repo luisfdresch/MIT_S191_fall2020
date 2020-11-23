@@ -143,6 +143,23 @@ function plot_object!(p, wall::Wall)
 	# xlims!(p, old_xlims)
 end
 
+# ╔═╡ df814752-2da9-11eb-38ac-0ff5168d3562
+function plot_object!(p, wall::BlackWall)
+	# old_xlims = xlims(p)
+	# old_ylims = ylims(p)
+	
+	adjacent = [wall.normal[2], -wall.normal[1]]
+	
+	a = wall.position + adjacent * 20
+	b = wall.position - adjacent * 20
+	
+	line = [a, b]
+	
+	plot!(p, first.(line), last.(line), label="Wall")
+	# xlims!(p, old_xlims)
+	# xlims!(p, old_xlims)
+end
+
 # ╔═╡ 5f551588-1ac4-11eb-1f86-197442f1ef1d
 md"""
 In our simulations, we will enclose our scene in a box of **four walls**, to make sure that no rays can escape the scene. We have written this box (i.e. vector of walls) below, but we are still missing the roof.
@@ -398,6 +415,12 @@ Our event-driven simulation is a stepping method, but instead of taking small st
 # ╔═╡ 2c6defd0-1ca1-11eb-17db-d5cb498f3265
 function interact(photon::Photon, hit::Intersection{Wall})
 	return Photon(hit.point, reflect(photon.l, hit.object.normal), photon.ior)
+
+end
+
+# ╔═╡ 04eb8f16-2daa-11eb-3604-414797bac9c8
+function interact(photon::Photon, hit::Intersection{BlackWall})
+	return photon
 
 end
 
@@ -957,7 +980,7 @@ Second lens $(@bind second_lens CheckBox())
 # ╔═╡ cd2c3500-2da2-11eb-1466-b57ac0bc1c49
 let
 	photons = [
-		Photon([-5,2], [1,0], 1.0),
+		#Photon([-5,2], [1,0], 1.0),
 		Photon([-5,1.5], [1,0], 1.0),
 		Photon([-5,1], [1,0], 1.0),
 		Photon([-5,0.5], [1,0], 1.0),
@@ -965,26 +988,27 @@ let
 		Photon([-5,-0.5], [1,0], 1.0),
 		Photon([-5,-1], [1,0], 1.0),
 		Photon([-5,-1.5], [1,0], 1.0),
-		Photon([-5,-2], [1,0], 1.0)		
+		#Photon([-5,-2], [1,0], 1.0)		
 		]
 	
 	lenses = [
-		Sphere([0, 0], 2.5 , first_ior),
+		Sphere([0, 0], 3 , first_ior),
 		
 	]
 	if second_lens
-		push!(lenses, Sphere([4, 0], 1 , second_ior))
+		push!(lenses, Sphere([5, 0], 1 , second_ior))
 	end
 	
 	my_scene = [
-		Wall([10,0], [-1,0]),
+		Wall([40,0], [-1, 1]),
+		Wall([45,0], [-1, 1]),
 		Wall([-10,0], [1,0]),
 		Wall([0,-10], [0,1]),
 		Wall([0,10], [0,-1])
 	]
 	scene = [lenses ..., my_scene...]
 	
-	p = plot_scene(scene, legend=false, xlim=(-11,11), ylim=(-11,11))
+	p = plot_scene(scene, legend=false, xlim=(-5,11), ylim=(-5,5))
 	
 	for photon in photons
 		path = accumulate(1:n_bounces; init=photon) do old_photon, i
@@ -997,9 +1021,6 @@ let
 	
 	p
 end |> as_svg
-
-# ╔═╡ 270762e4-1ca4-11eb-2fb4-392e5c3b3e04
-
 
 # ╔═╡ bbf730c8-1ca6-11eb-3bb0-1188046339ac
 md"""
@@ -1163,8 +1184,9 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╠═99c61b74-1941-11eb-2323-2bdb7c120a28
 # ╠═0906b340-19d3-11eb-112c-e568f69deb5d
 # ╠═e45e1d36-1a12-11eb-2720-294c4be6e9fd
-# ╟─6de1bafc-1a01-11eb-3d67-c9d9b6c3cea8
-# ╟─eff9329e-1a05-11eb-261f-734127d36750
+# ╠═6de1bafc-1a01-11eb-3d67-c9d9b6c3cea8
+# ╠═df814752-2da9-11eb-38ac-0ff5168d3562
+# ╠═eff9329e-1a05-11eb-261f-734127d36750
 # ╟─5f551588-1ac4-11eb-1f86-197442f1ef1d
 # ╠═ac9bafaa-1ac4-11eb-16c4-0df8133f9c98
 # ╠═0393dd3a-1a06-11eb-18a9-494ae7a26bc0
@@ -1220,6 +1242,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╠═79532662-1c7e-11eb-2edf-57e7cfbc1eda
 # ╟─b6614d80-194b-11eb-1edb-dba3c29672f8
 # ╠═2c6defd0-1ca1-11eb-17db-d5cb498f3265
+# ╠═04eb8f16-2daa-11eb-3604-414797bac9c8
 # ╟─ad5a7420-1c7f-11eb-042f-115a9ef4c676
 # ╠═0b03316c-1c80-11eb-347c-1b5c9a0ae379
 # ╟─fb70cc0c-1c7f-11eb-31b5-87b168a66e19
@@ -1267,7 +1290,6 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─3dd0a48c-1ca3-11eb-1127-e7c43b5d1666
 # ╟─7300a27c-2da5-11eb-0046-51c52279c3c7
 # ╟─cd2c3500-2da2-11eb-1466-b57ac0bc1c49
-# ╠═270762e4-1ca4-11eb-2fb4-392e5c3b3e04
 # ╟─bbf730c8-1ca6-11eb-3bb0-1188046339ac
 # ╠═cbd8f164-1ca6-11eb-1440-bdaabf73a6c7
 # ╟─ebd05bf0-19c3-11eb-2559-7d0745a84025
@@ -1277,7 +1299,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─ec4abc12-19c3-11eb-1ca4-b5e9d3cd100b
 # ╟─ec57b460-19c3-11eb-2142-07cf28dcf02b
 # ╟─ec5d59b0-19c3-11eb-0206-cbd1a5415c28
-# ╠═ec698eb0-19c3-11eb-340a-e319abb8ebb5
+# ╟─ec698eb0-19c3-11eb-340a-e319abb8ebb5
 # ╟─ec7638e0-19c3-11eb-1ca1-0b3aa3b40240
 # ╟─ec85c940-19c3-11eb-3375-a90735beaec1
 # ╠═8cfa4902-1ad3-11eb-03a1-736898ff9cef
