@@ -592,15 +592,15 @@ function intersection_distance(photon::Photon, sphere::Sphere)
 	c = ((photon.p - sphere.center) ⋅ (photon.p - sphere.center) )- sphere.radius^2
 	Δ = b^2 - 4*a*c
 	if Δ < 0 return -1 end
-	if Δ == 0 && b <= 0 return "test" end
+	if Δ == 0 && b <= 0 return -b/2a end
 	root = [(-b + sqrt(Δ)) / 2a, (-b - sqrt(Δ)) / 2a]
-	if root[1] < 0
-		if root[2] < 0
+	if root[1] < 1e-3
+		if root[2] < 1e-3
 			return -2
 		else
 			return root[2]
 		end
-	elseif root[2] < 0
+	elseif root[2] < 1e-3
 		return root[1]
 	else return minimum(root)
 	end
@@ -816,8 +816,19 @@ md"""
 
 # ╔═╡ 427747d6-1ca1-11eb-28ae-ff50728c84fe
 function interact(photon::Photon, hit::Intersection{Sphere})
+	iors = if photon.ior == 1
+		iors = [photon.ior, hit.object.ior]
+	else
+		iors = [hit.object.ior, 1]
+	end
 	
-	return missing
+	ℓ₂ = refract(
+		photon.l, 
+		sphere_normal_at(hit.point, hit.object), 
+		iors...
+		)
+	
+	return Photon(hit.point, ℓ₂, iors[2])
 end
 
 # ╔═╡ 0b03316c-1c80-11eb-347c-1b5c9a0ae379
@@ -870,7 +881,7 @@ To test your code, modify the definition of `test_lens_photon` and `test_lens` b
 """
 
 # ╔═╡ 65aec4fc-1c9e-11eb-1c5a-6dd7c533d3b8
-test_lens_photon = Photon([0,0], [1,0], 1.0)
+test_lens_photon = Photon([0,-1], [1,0], 1.0)
 
 # ╔═╡ 5895d9ae-1c9e-11eb-2f4e-671f2a7a0150
 test_lens = Sphere(
@@ -882,7 +893,7 @@ test_lens = Sphere(
 # ╔═╡ 83acf10e-1c9e-11eb-3426-bb28e7bc6c79
 let
 	scene = [test_lens, box_scene...]
-	N = 3
+	N = 5
 	
 	p = plot_scene(scene, legend=false, xlim=(-11,11), ylim=(-11,11))
 	
@@ -902,11 +913,12 @@ By defining a method for `interact` that takes a sphere intersection, we are now
 """
 
 # ╔═╡ c492a1f8-1a0c-11eb-2c38-5921c39cf5f8
-@bind sphere_test_ray_N Slider(1:30; default=4)
+@bind sphere_test_ray_N Slider(1:30; default=4, show_value = true)
 
 # ╔═╡ b65d9a0c-1a0c-11eb-3cd5-e5a2c4302c7e
 let
 	scene = [test_lens, box_scene...]
+	
 	p = plot_scene(scene, legend=false, xlim=(-11,11), ylim=(-11,11))
 	
 	path = accumulate(1:sphere_test_ray_N; init=test_lens_photon) do old_photon, i
@@ -929,6 +941,62 @@ Now we can put it all together into an image of spherical aberration!
 md"""
 👉 Recreate the spherical aberration figure from [the lecture](https://www.youtube.com/watch?v=MkkZb5V6HqM) (around the end of the video), and make the index of refraction interactive using a `Slider`. _Or make something else!_
 """
+
+# ╔═╡ 7300a27c-2da5-11eb-0046-51c52279c3c7
+md""" 
+Interactions $(@bind n_bounces Slider(0:10, default=3, show_value=true) )
+
+First lens n $(@bind first_ior Slider(0:0.05:2, default=1.3, show_value=true) )
+
+Second lens n $(@bind second_ior Slider(0:0.05:2, default=1.3, show_value=true))
+
+Second lens $(@bind second_lens CheckBox())
+
+"""
+
+# ╔═╡ cd2c3500-2da2-11eb-1466-b57ac0bc1c49
+let
+	photons = [
+		Photon([-5,2], [1,0], 1.0),
+		Photon([-5,1.5], [1,0], 1.0),
+		Photon([-5,1], [1,0], 1.0),
+		Photon([-5,0.5], [1,0], 1.0),
+		Photon([-5,0], [1,0], 1.0),
+		Photon([-5,-0.5], [1,0], 1.0),
+		Photon([-5,-1], [1,0], 1.0),
+		Photon([-5,-1.5], [1,0], 1.0),
+		Photon([-5,-2], [1,0], 1.0)		
+		]
+	
+	lenses = [
+		Sphere([0, 0], 2.5 , first_ior),
+		
+	]
+	if second_lens
+		push!(lenses, Sphere([4, 0], 1 , second_ior))
+	end
+	
+	my_scene = [
+		Wall([10,0], [-1,0]),
+		Wall([-10,0], [1,0]),
+		Wall([0,-10], [0,1]),
+		Wall([0,10], [0,-1])
+	]
+	scene = [lenses ..., my_scene...]
+	
+	p = plot_scene(scene, legend=false, xlim=(-11,11), ylim=(-11,11))
+	
+	for photon in photons
+		path = accumulate(1:n_bounces; init=photon) do old_photon, i
+			step_ray(old_photon, scene)
+		end
+
+		line = [photon.p, [r.p for r in path]...]
+		plot!(p, first.(line), last.(line), lw=1, color=:red)
+	end
+	
+	p
+end |> as_svg
 
 # ╔═╡ 270762e4-1ca4-11eb-2fb4-392e5c3b3e04
 
@@ -1161,7 +1229,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─7ba5dda0-1ad1-11eb-1c4e-2391c11f54b3
 # ╠═1a43b70c-1ca3-11eb-12a5-a94ebbba0e86
 # ╠═3cd36ac0-1a09-11eb-1818-75b36e67594a
-# ╟─1ee0787e-1a08-11eb-233b-43a654f70117
+# ╠═1ee0787e-1a08-11eb-233b-43a654f70117
 # ╟─7478330a-1c81-11eb-2f9f-099f1111032c
 # ╟─ba0a869a-1ad1-11eb-091f-916e9151f052
 # ╠═3aa539ce-193f-11eb-2a0f-bbc6b83528b7
@@ -1182,7 +1250,7 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─584ce620-1935-11eb-177a-f75d9ad8a399
 # ╟─78915326-1937-11eb-014f-fff29b3660a0
 # ╠═14dc73d2-1a0d-11eb-1a3c-0f793e74da9b
-# ╠═71b70da6-193e-11eb-0bc4-f309d24fd4ef
+# ╟─71b70da6-193e-11eb-0bc4-f309d24fd4ef
 # ╟─54b81de0-193f-11eb-004d-f90ec43588f8
 # ╠═6fdf613c-193f-11eb-0029-957541d2ed4d
 # ╟─392c25b8-1add-11eb-225d-49cfca27bef4
@@ -1191,12 +1259,14 @@ TODO_note(text) = Markdown.MD(Markdown.Admonition("warning", "TODO note", [text]
 # ╟─dced1fd0-1c9e-11eb-3226-17dc1e09e018
 # ╠═65aec4fc-1c9e-11eb-1c5a-6dd7c533d3b8
 # ╠═5895d9ae-1c9e-11eb-2f4e-671f2a7a0150
-# ╟─83acf10e-1c9e-11eb-3426-bb28e7bc6c79
+# ╠═83acf10e-1c9e-11eb-3426-bb28e7bc6c79
 # ╟─13fef49c-1c9e-11eb-2aa3-d3aa2bfd0d57
-# ╟─c492a1f8-1a0c-11eb-2c38-5921c39cf5f8
-# ╠═b65d9a0c-1a0c-11eb-3cd5-e5a2c4302c7e
+# ╠═c492a1f8-1a0c-11eb-2c38-5921c39cf5f8
+# ╟─b65d9a0c-1a0c-11eb-3cd5-e5a2c4302c7e
 # ╟─c00eb0a6-cab2-11ea-3887-070ebd8d56e2
 # ╟─3dd0a48c-1ca3-11eb-1127-e7c43b5d1666
+# ╟─7300a27c-2da5-11eb-0046-51c52279c3c7
+# ╟─cd2c3500-2da2-11eb-1466-b57ac0bc1c49
 # ╠═270762e4-1ca4-11eb-2fb4-392e5c3b3e04
 # ╟─bbf730c8-1ca6-11eb-3bb0-1188046339ac
 # ╠═cbd8f164-1ca6-11eb-1440-bdaabf73a6c7
